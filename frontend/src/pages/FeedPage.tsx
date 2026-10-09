@@ -113,6 +113,7 @@ export function FeedPage() {
       <section className="profile" aria-labelledby="profile-name">
         <Avatar name={author} size={80} />
         <div>
+          {profile && <p className="hello" aria-hidden="true">Hi there, I'm</p>}
           <h1 id="profile-name">{profile ? author : 'Posts'}</h1>
           {profile && (
             <p className="muted stats">
@@ -121,7 +122,7 @@ export function FeedPage() {
               <a href="/api/rss.xml" className="rss-link">RSS<span className="visually-hidden"> feed</span></a>
             </p>
           )}
-          {profile?.bio && <p>{profile.bio}</p>}
+          {profile && <p className="bio">{profile.bio || 'Stories, photos and little notes from my corner of the world.'}</p>}
         </div>
       </section>
 

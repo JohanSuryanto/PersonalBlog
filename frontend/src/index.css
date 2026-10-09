@@ -1,37 +1,57 @@
 /* ---------- Tokens ---------- */
+/* "Sunny journal": warm cream paper, raspberry ink, a sunset gradient for the fun bits. */
 :root {
-  --bg: #fafafa;
+  --bg: #fff7ec;
   --surface: #ffffff;
-  --surface-2: #efefef;
-  --fg: #262626;
-  --muted: #6b6b6b;
-  --border: #dbdbdb;
-  --accent: #0064d1;
+  --surface-2: #fff0e0;
+  --fg: #2a1f17;
+  --muted: #75604f;
+  --border: #f1dcc6;
+  --accent: #c92a62;
   --accent-fg: #ffffff;
-  --error: #c62828;
-  --success: #1b7f3b;
-  --overlay: rgba(0, 0, 0, 0.55);
-  --skeleton: #ececec;
-  --ring: linear-gradient(45deg, #f9ce34, #ee2a7b 50%, #6228d7);
-  --radius: 12px;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
+  --accent-soft: color-mix(in srgb, var(--accent) 10%, transparent);
+  --sun: #ffd23f;
+  --sun-fg: #3a2600;
+  --error: #c0261b;
+  --success: #1d7a46;
+  --overlay: rgba(42, 20, 10, 0.55);
+  --skeleton: #f8e7d4;
+  --ring: linear-gradient(45deg, #ffb238, #ff5e7e 50%, #8f5bff);
+  --sunset: linear-gradient(120deg, #ff9a3c, #ff5e7e 50%, #a35bff);
+  --brand-ink: linear-gradient(90deg, #d9481c, #c92a62 55%, #7c3aed);
+  --glow-1: #ffd89e;
+  --glow-2: #ffc9de;
+  --glow-3: #fff0a8;
+  --hero: linear-gradient(135deg, #fff0c2 0%, #ffdce8 55%, #eadcff 100%);
+  --media-bg: #1c1411;
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --radius: 16px;
+  --shadow: 0 1px 2px rgba(120, 60, 20, 0.06), 0 8px 24px rgba(200, 100, 40, 0.08);
   color-scheme: light;
 }
 
 :root[data-theme='dark'] {
-  --bg: #000000;
-  --surface: #121212;
-  --surface-2: #262626;
-  --fg: #f5f5f5;
-  --muted: #a8a8a8;
-  --border: #363636;
-  --accent: #4cb5f9;
-  --accent-fg: #000000;
+  --bg: #16111d;
+  --surface: #211a2a;
+  --surface-2: #2d2438;
+  --fg: #f8efe6;
+  --muted: #bcaab8;
+  --border: #3a2f47;
+  --accent: #ff8fb1;
+  --accent-fg: #2a0a18;
+  --sun: #ffd23f;
+  --sun-fg: #3a2600;
   --error: #ff8a80;
-  --success: #7ee2a0;
-  --overlay: rgba(0, 0, 0, 0.6);
-  --skeleton: #1f1f1f;
-  --shadow: none;
+  --success: #7fe0a6;
+  --overlay: rgba(10, 5, 15, 0.6);
+  --skeleton: #2a2233;
+  --brand-ink: linear-gradient(90deg, #ffb26b, #ff8fb1 55%, #c9a2ff);
+  --glow-1: rgba(255, 140, 60, 0.16);
+  --glow-2: rgba(180, 90, 255, 0.18);
+  --glow-3: rgba(255, 94, 126, 0.10);
+  --hero: linear-gradient(135deg, rgba(255, 178, 56, 0.18), rgba(255, 94, 126, 0.16) 55%, rgba(163, 91, 255, 0.2));
+  --media-bg: #0d0a10;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   color-scheme: dark;
 }
 
@@ -45,7 +65,16 @@ html {
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
 }
-body { margin: 0; background: var(--bg); color: var(--fg); }
+body {
+  margin: 0; color: var(--fg);
+  background:
+    radial-gradient(55rem 32rem at -5% -10%, var(--glow-1), transparent 65%),
+    radial-gradient(50rem 30rem at 105% 5%, var(--glow-2), transparent 65%),
+    radial-gradient(45rem 30rem at 50% 110%, var(--glow-3), transparent 65%),
+    var(--bg);
+  background-attachment: fixed;
+}
+::selection { background: var(--sun); color: var(--sun-fg); }
 img { max-width: 100%; display: block; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -103,8 +132,12 @@ textarea { resize: vertical; line-height: 1.6; }
   backdrop-filter: saturate(180%) blur(12px);
   border-bottom: 1px solid var(--border);
 }
+.site-header::before { content: ''; display: block; height: 3px; background: var(--sunset); }
 .site-header-inner { max-width: 900px; margin: 0 auto; padding: 0.6rem 1rem; display: flex; align-items: center; gap: 0.5rem; }
-.brand { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; color: var(--fg); }
+.brand {
+  font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; font-style: italic; letter-spacing: -0.01em;
+  color: var(--accent); background: var(--brand-ink); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
 .brand:hover { text-decoration: none; }
 .site-header nav { margin-left: auto; display: flex; align-items: center; gap: 0.25rem; }
 .site-header nav a { padding: 0.4rem 0.75rem; border-radius: 8px; color: var(--fg); font-weight: 600; }
@@ -203,7 +236,7 @@ textarea { resize: vertical; line-height: 1.6; }
 .load-more { display: flex; justify-content: center; }
 
 /* ---------- Slider ---------- */
-.slider { position: relative; background: #000; border-radius: var(--radius); overflow: hidden; }
+.slider { position: relative; background: var(--media-bg); border-radius: var(--radius); overflow: hidden; }
 .slider-track {
   display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth;
   scrollbar-width: none;
@@ -290,7 +323,7 @@ textarea { resize: vertical; line-height: 1.6; }
 @media (min-width: 800px) { .login-layout { grid-template-columns: 1.1fr 1fr; } }
 .login-brand {
   position: relative; display: none; overflow: hidden; color: #fff;
-  background: linear-gradient(135deg, #f9ce34 0%, #ee2a7b 45%, #6228d7 100%);
+  background: var(--sunset);
 }
 @media (min-width: 800px) { .login-brand { display: flex; align-items: flex-end; } }
 .collage {
@@ -513,7 +546,7 @@ kbd {
 .badge-author {
   display: inline-block; margin-right: 0.3rem; padding: 0.05rem 0.45rem; border-radius: 999px; vertical-align: 0.1em;
   font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
-  background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--fg);
+  background: var(--sun); color: var(--sun-fg);
 }
 
 button.link-button {
@@ -633,7 +666,7 @@ button.link-button.danger-link:hover { color: var(--error); }
   background: var(--surface); color: var(--fg); box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
 }
 .post-modal[open] { animation: modal-in 0.18s ease-out; }
-.post-modal::backdrop { background: rgba(0, 0, 0, 0.7); }
+.post-modal::backdrop { background: rgba(30, 12, 20, 0.72); backdrop-filter: blur(3px); }
 @keyframes modal-in { from { opacity: 0; transform: scale(0.97); } }
 @media (prefers-reduced-motion: reduce) { .post-modal[open] { animation: none; } }
 body:has(.post-modal[open]) { overflow: hidden; }
@@ -647,7 +680,7 @@ body:has(.post-modal[open]) { overflow: hidden; }
 .post-modal-body { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); height: 100%; border-radius: var(--radius); overflow: hidden; }
 .post-modal-body.text-only { grid-template-columns: 1fr; max-width: 640px; margin: 0 auto; }
 .post-modal:has(.text-only) { width: min(640px, calc(100vw - 2rem)); }
-.post-modal-media { display: flex; align-items: center; min-height: 0; background: #000; }
+.post-modal-media { display: flex; align-items: center; min-height: 0; background: var(--media-bg); }
 .post-modal-media > section { width: 100%; }
 .post-modal-media .slider { border-radius: 0; }
 .post-modal-media .slider-track img { max-height: calc(min(90vh, 760px) - 2.6rem); }
@@ -691,3 +724,58 @@ body:has(.post-modal[open]) { overflow: hidden; }
 .post-modal:has(.text-only) .post-modal-nav.next { right: max(0.75rem, calc(50vw - 320px - 3.5rem)); }
 .rss-link { color: var(--muted); font-weight: 600; }
 .rss-link:hover { color: #ee802f; text-decoration: none; }
+
+
+/* ---------- Personality ---------- */
+/* Display serif for names and titles gives it a journal feel. */
+.profile h1, .card-body h2, .post-title, .prose h1, .prose h2, .prose h3, .post-modal-title, .page-head h1, .login-form h1, .login-brand-title, .not-found h1, .crash h1 {
+  font-family: var(--font-display); letter-spacing: -0.01em;
+}
+.card-body h2 { font-size: 1.2rem; }
+.card.text-only h2 { font-size: 1.45rem; }
+.profile h1 { font-size: 1.75rem; }
+
+/* Buttons and links get the raspberry ink with a soft glow. */
+button { border-radius: 10px; }
+button.primary, .button-link:not(.secondary) {
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+button.primary:hover:not(:disabled), .button-link:not(.secondary):hover { opacity: 1; filter: brightness(1.08); }
+
+/* Cards: warm paper that lifts a little on hover. */
+.card, .post-card, .comments, .activity-list, .post-list, .stats-row > div, .editor-panel, .search-panel { border-color: var(--border); }
+.card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(120, 60, 20, 0.06), 0 14px 32px rgba(200, 100, 40, 0.14); }
+:root[data-theme='dark'] .card:hover { box-shadow: 0 14px 32px rgba(0, 0, 0, 0.45); }
+@media (prefers-reduced-motion: reduce) { .card, .card:hover { transition: none; transform: none; } }
+
+/* Sunset touches: the feed tab underline, chips, stats and the "new" dot. */
+.feed-tab { border-top: 2px solid transparent; border-image: var(--sunset) 1; }
+.chip { background: var(--accent-soft); }
+.stats-row dd { background: var(--brand-ink); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: var(--accent); }
+.unread-dot, .header-search .dot { background: var(--sunset); }
+.comment.is-author, .activity.unread { background: var(--accent-soft); }
+.post-modal { box-shadow: 0 30px 80px rgba(60, 20, 30, 0.45); }
+
+/* Profile as a sunny banner. */
+.profile {
+  position: relative; overflow: hidden; margin-bottom: 1rem; padding: 1.5rem 1.6rem;
+  background: var(--hero); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow);
+}
+.profile::after {
+  /* a little sun peeking in from the corner */
+  content: ''; position: absolute; right: -40px; top: -40px; width: 150px; height: 150px; border-radius: 50%;
+  background: radial-gradient(circle, var(--sun) 0 38%, color-mix(in srgb, var(--sun) 35%, transparent) 39% 55%, transparent 56%);
+  opacity: 0.85; pointer-events: none;
+}
+.profile > * { position: relative; z-index: 1; }
+.profile .avatar > span { background: var(--surface); }
+.profile .hello { margin: 0 0 0.1rem; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.04em; color: var(--accent); }
+.profile .bio { margin-top: 0.45rem; max-width: 26rem; line-height: 1.5; }
+.feed-toolbar { border-top: 0; }
+.feed-tab { margin-top: 0; }
+/* At night the sun becomes a crescent moon. */
+:root[data-theme='dark'] .profile::after {
+  right: 22px; top: 18px; width: 64px; height: 64px; background: none;
+  box-shadow: inset -18px 10px 0 0 #f6e7b0; opacity: 0.9;
+}
