@@ -1,15 +1,20 @@
+import { lazy, Suspense, type ComponentType } from 'react'
 import { Link, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from './auth'
 import { Icon } from './components/Icon'
 import { RequireAuth } from './components/RequireAuth'
 import { SearchToggle } from './components/SearchToggle'
-import { AdminCommentsPage } from './pages/AdminCommentsPage'
-import { AdminListPage } from './pages/AdminListPage'
-import { EditorPage } from './pages/EditorPage'
 import { FeedPage } from './pages/FeedPage'
-import { LoginPage } from './pages/LoginPage'
-import { PostPage } from './pages/PostPage'
 import { useTheme } from './theme'
+
+// Readers land on the feed; everything else (post page, login, author tools) loads on demand.
+const named = <K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) =>
+  lazy(() => load().then((m) => ({ default: m[name] })))
+const PostPage = named(() => import('./pages/PostPage'), 'PostPage')
+const LoginPage = named(() => import('./pages/LoginPage'), 'LoginPage')
+const AdminListPage = named(() => import('./pages/AdminListPage'), 'AdminListPage')
+const AdminCommentsPage = named(() => import('./pages/AdminCommentsPage'), 'AdminCommentsPage')
+const EditorPage = named(() => import('./pages/EditorPage'), 'EditorPage')
 
 export default function App() {
   const { user } = useAuth()
@@ -52,6 +57,7 @@ export default function App() {
         </div>
       </header>
       <main id="main" tabIndex={-1} className={wide ? 'wide' : undefined}>
+        <Suspense fallback={<p role="status" className="page-loading"><span className="spinner" aria-hidden="true" /> Loading…</p>}>
         <Routes>
           <Route path="/" element={<FeedPage />} />
           <Route path="/posts/:slug" element={<PostPage />} />
@@ -62,6 +68,7 @@ export default function App() {
           <Route path="/admin/comments" element={<RequireAuth><AdminCommentsPage /></RequireAuth>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
       </main>
     </>
   )

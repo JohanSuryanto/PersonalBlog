@@ -670,3 +670,24 @@ body:has(.post-modal[open]) { overflow: hidden; }
   .post-modal-side { border-left: 0; }
   .post-modal-close { background: rgba(0, 0, 0, 0.5); }
 }
+
+/* ---------- Crash page ---------- */
+.crash { display: grid; justify-items: center; align-content: center; min-height: 100vh; padding: 2rem 1rem; text-align: center; }
+.crash-icon { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; color: var(--error); background: color-mix(in srgb, var(--error) 12%, transparent); }
+.crash h1 { margin: 1rem 0 0.25rem; }
+.crash p { margin: 0 0 1.5rem; max-width: 26rem; }
+.crash-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; }
+.page-loading { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 3rem 1rem; color: var(--muted); }
+.post-modal-nav {
+  position: fixed; top: 50%; z-index: 2; display: grid; place-items: center; width: 40px; height: 40px; padding: 0;
+  transform: translateY(-50%); border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.9); color: #262626;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.post-modal-nav:hover:not(:disabled) { background: #fff; }
+.post-modal-nav.prev { left: max(0.75rem, calc(50vw - 550px - 3.5rem)); }
+.post-modal-nav.next { right: max(0.75rem, calc(50vw - 550px - 3.5rem)); }
+@media (max-width: 800px) { .post-modal-nav { display: none; } }
+.post-modal:has(.text-only) .post-modal-nav.prev { left: max(0.75rem, calc(50vw - 320px - 3.5rem)); }
+.post-modal:has(.text-only) .post-modal-nav.next { right: max(0.75rem, calc(50vw - 320px - 3.5rem)); }
+.rss-link { color: var(--muted); font-weight: 600; }
+.rss-link:hover { color: #ee802f; text-decoration: none; }

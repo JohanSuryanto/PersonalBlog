@@ -33,6 +33,8 @@ dotnet ef database update --connection "Host=ep-xxx.region.aws.neon.tech;Databas
 - Backend: `backend/src/Blog.Api/Dockerfile` → any container host.
 - Frontend: `npm run build` in `frontend/` → static host. It must rewrite `/api/*` to the backend so the
   login cookie stays same-origin (`frontend/vercel.json` is an example; replace `YOUR-BACKEND-HOST`).
+- Set `Site__Url` (e.g. `https://myblog.example`) on the backend so the RSS feed (`/api/rss.xml`) links to the
+  public site rather than the backend host.
 - Set `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` on the backend when it runs behind a proxy, so the comment
   rate limit (5 per 10 minutes, `Comments:RateLimit`) counts each reader's address, not the proxy's.
 

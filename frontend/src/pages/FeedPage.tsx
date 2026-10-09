@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useLocation, useNavigate, useNavigationType, useSearchParams } from 'react-router-dom'
 import { api, type Profile } from '../api'
 import { Avatar } from '../components/Avatar'
 import { Icon } from '../components/Icon'
 import { PostCard, PostCardSkeleton } from '../components/PostCard'
-import { PostModal } from '../components/PostModal'
 import { useSearchPanel } from '../components/SearchToggle'
 import { formatDay } from '../format'
 import { useFeed } from '../hooks/useFeed'
+
+// The popup (and its Markdown renderer) loads on the first click, keeping the feed's first load small.
+const PostModal = lazy(() => import('../components/PostModal').then((m) => ({ default: m.PostModal })))
 
 export function FeedPage() {
   const [params, setParams] = useSearchParams()
@@ -75,6 +77,23 @@ export function FeedPage() {
     setParams(next, { state: { popup: true, toComments } })
   }
 
+  // Neighbours in the loaded feed (respects search/filters). Unknown when the post isn't loaded (shared link).
+  const popupIndex = popup ? items.findIndex((p) => p.slug === popup) : -1
+  const neighbors = popupIndex >= 0
+    ? { prev: items[popupIndex - 1]?.slug ?? null, next: items[popupIndex + 1]?.slug ?? null }
+    : undefined
+
+  // Paging through the popup near the end of what's loaded fetches the next batch, so "next" keeps going.
+  useEffect(() => {
+    if (popupIndex >= 0 && popupIndex >= items.length - 2) loadMore()
+  }, [popupIndex, items.length, loadMore])
+
+  function showPost(slug: string) {
+    const next = new URLSearchParams(params)
+    next.set('post', slug)
+    setParams(next, { replace: true, state: location.state })
+  }
+
   function closePost() {
     // Opened here: step back. Arrived on a shared ?post= link: just drop the parameter.
     if (popupState?.popup) navigate(-1)
@@ -98,6 +117,8 @@ export function FeedPage() {
           {profile && (
             <p className="muted stats">
               <strong>{profile.postCount}</strong> {profile.postCount === 1 ? 'post' : 'posts'}
+              <span aria-hidden="true"> · </span>
+              <a href="/api/rss.xml" className="rss-link">RSS<span className="visually-hidden"> feed</span></a>
             </p>
           )}
           {profile?.bio && <p>{profile.bio}</p>}
@@ -186,13 +207,16 @@ export function FeedPage() {
       )}
 
       {popup && (
+        <Suspense fallback={null}>
         <PostModal
-          key={popup}
           slug={popup}
+          neighbors={neighbors}
+          onNavigate={showPost}
           toComments={popupState?.toComments}
           onClose={closePost}
           onCountChange={(commentCount) => updateItem(popup, { commentCount })}
         />
+        </Suspense>
       )}
     </>
   )

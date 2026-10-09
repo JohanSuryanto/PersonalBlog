@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Xml.Linq;
 using Blog.Api.Data;
 using Blog.Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,7 @@ public static class PostEndpoints
     public static void MapPostEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/api/posts", GetFeed);
+        app.MapGet("/api/rss.xml", GetRss);
         app.MapGet("/api/profile", async (BlogDbContext db, IConfiguration config) => new Profile(
             await db.Users.Select(u => u.DisplayName).FirstOrDefaultAsync() ?? "",
             config["Author:Bio"],
@@ -96,6 +98,37 @@ public static class PostEndpoints
         var items = rows.Take(BatchSize).Select(r => new FeedItem(r.Id, r.Slug!, r.Title, r.Excerpt, r.PublishedAt, r.Images, r.CommentCount)).ToList();
         var next = rows.Count > BatchSize ? EncodeCursor(items[^1].PublishedAt, items[^1].Id) : null;
         return Results.Ok(new FeedPage(items, next));
+    }
+
+    /// RSS 2.0 of the 20 newest published posts. Links use Site:Url (the public frontend address) when set,
+    /// since behind the frontend's /api rewrite the request host is the backend's.
+    static async Task<IResult> GetRss(BlogDbContext db, IConfiguration config, HttpRequest request)
+    {
+        var site = (config["Site:Url"] ?? $"{request.Scheme}://{request.Host}").TrimEnd('/');
+        var author = await db.Users.Select(u => u.DisplayName).FirstOrDefaultAsync() ?? "";
+        var posts = await db.Posts.AsNoTracking()
+            .Where(p => p.Status == PostStatus.Published)
+            .OrderByDescending(p => p.PublishedAt).ThenByDescending(p => p.Id)
+            .Take(20)
+            .Select(p => new { p.Slug, p.Title, p.Excerpt, PublishedAt = p.PublishedAt!.Value })
+            .ToListAsync();
+
+        var title = string.IsNullOrEmpty(author) ? "Personal Blog" : $"{author}'s blog";
+        var rss = new XDocument(new XDeclaration("1.0", "utf-8", null), new XElement("rss", new XAttribute("version", "2.0"),
+            new XElement("channel",
+                new XElement("title", title),
+                new XElement("link", site + "/"),
+                new XElement("description", config["Author:Bio"] is { Length: > 0 } bio ? bio : "Stories, photos and notes."),
+                new XElement("language", "en"),
+                posts.Count > 0 ? new XElement("lastBuildDate", posts[0].PublishedAt.ToString("R")) : null,
+                posts.Select(p => new XElement("item",
+                    new XElement("title", p.Title),
+                    new XElement("link", $"{site}/posts/{p.Slug}"),
+                    new XElement("guid", new XAttribute("isPermaLink", "true"), $"{site}/posts/{p.Slug}"),
+                    new XElement("pubDate", p.PublishedAt.ToString("R")),
+                    new XElement("description", p.Excerpt))))));
+
+        return Results.Text($"{rss.Declaration}\n{rss}", "application/rss+xml; charset=utf-8");
     }
 
     internal static async Task<PostDetail> ToDetailAsync(Post post, BlogDbContext db)

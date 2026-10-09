@@ -10,7 +10,7 @@ import { Icon } from './Icon'
 import { ImageSlider } from './ImageSlider'
 
 /** Instagram-style post popup: media on the left, post text and comments on the right. Uses the native <dialog>. */
-export function PostModal({ postId, slug, highlight, toComments, onClose, onDeleted, onCountChange }: {
+export function PostModal({ postId, slug, highlight, toComments, onClose, onDeleted, onCountChange, onNavigate, neighbors }: {
   /** Author views load by id (drafts included); readers load a published post by slug. */
   postId?: number
   slug?: string
@@ -20,6 +20,10 @@ export function PostModal({ postId, slug, highlight, toComments, onClose, onDele
   onClose: () => void
   onDeleted?: (comment: Comment) => void
   onCountChange?: (count: number) => void
+  /** Enables previous/next post arrows (Instagram-style). */
+  onNavigate?: (slug: string) => void
+  /** Neighbours in the list the popup was opened from; without it, falls back to the post's newer/older links. */
+  neighbors?: { prev: string | null; next: string | null }
 }) {
   const { user } = useAuth()
   const ref = useRef<HTMLDialogElement>(null)
@@ -59,19 +63,27 @@ export function PostModal({ postId, slug, highlight, toComments, onClose, onDele
     onCountChange?.(commentCount)
   }, [onCountChange])
 
-  // ← / → page through the images from anywhere while the popup is open (not while typing).
-  // Listens on the document so it still works if focus has dropped to <body>; the slider's own handler wins inside it.
+  const prev = onNavigate ? (neighbors ? neighbors.prev : post?.newer?.slug ?? null) : null
+  const next = onNavigate ? (neighbors ? neighbors.next : post?.older?.slug ?? null) : null
+  const nav = useRef({ prev, next, onNavigate })
+  nav.current = { prev, next, onNavigate }
+
+  // ← / → page through the images from anywhere while the popup is open (not while typing), then on to the
+  // previous/next post. Listens on the document so it still works if focus has dropped to <body>.
   useEffect(() => {
-    function pageImages(e: globalThis.KeyboardEvent) {
+    function onKey(e: globalThis.KeyboardEvent) {
       if (e.defaultPrevented || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
       if ((e.target as HTMLElement).closest?.('input, textarea, select, [contenteditable="true"], [role="alertdialog"]')) return
-      const button = ref.current?.querySelector<HTMLButtonElement>(`.post-modal-media .slider-nav.${e.key === 'ArrowLeft' ? 'prev' : 'next'}`)
-      if (!button) return
+      const back = e.key === 'ArrowLeft'
+      const button = ref.current?.querySelector<HTMLButtonElement>(`.post-modal-media .slider-nav.${back ? 'prev' : 'next'}`)
+      const target = back ? nav.current.prev : nav.current.next
+      if (button && !button.disabled) button.click()
+      else if (target) nav.current.onNavigate?.(target)
+      else return
       e.preventDefault()
-      button.click()
     }
-    document.addEventListener('keydown', pageImages)
-    return () => document.removeEventListener('keydown', pageImages)
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
   }, [])
 
   const published = post?.status === 'Published' && post.slug
@@ -90,6 +102,16 @@ export function PostModal({ postId, slug, highlight, toComments, onClose, onDele
       <button type="button" className="post-modal-close" onClick={onClose} aria-label="Close">
         <Icon name="close" size={22} />
       </button>
+      {prev && (
+        <button type="button" className="post-modal-nav prev" onClick={() => onNavigate!(prev)} aria-label="Previous post">
+          <Icon name="chevronLeft" size={22} />
+        </button>
+      )}
+      {next && (
+        <button type="button" className="post-modal-nav next" onClick={() => onNavigate!(next)} aria-label="Next post">
+          <Icon name="chevronRight" size={22} />
+        </button>
+      )}
 
       {!post && !error && (
         <div className="post-modal-loading">
@@ -100,7 +122,7 @@ export function PostModal({ postId, slug, highlight, toComments, onClose, onDele
       {error && <p role="alert" className="alert" id="post-modal-title">Could not load this post. It may have been unpublished.</p>}
 
       {post && (
-        <div className={post.images.length ? 'post-modal-body' : 'post-modal-body text-only'}>
+        <div key={post.id} className={post.images.length ? 'post-modal-body' : 'post-modal-body text-only'}>
           {post.images.length > 0 && (
             <div className="post-modal-media">
               <ImageSlider images={post.images} title={post.title} variant="post" />

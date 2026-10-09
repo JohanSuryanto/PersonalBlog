@@ -165,6 +165,29 @@ describe('FeedPage feed', () => {
     expect(within(dialog).getByText('2 / 3')).toBeInTheDocument()
   })
 
+  it('moves to the previous/next post from the popup, then closes back to the feed', async () => {
+    renderFeed()
+    await userEvent.click(await screen.findByRole('link', { name: 'Post 24' }))
+    await screen.findByRole('dialog', { name: 'Post 24' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next post' }))
+    expect(await screen.findByRole('dialog', { name: 'Post 23' })).toBeInTheDocument()
+    expect(location).toBe('?post=post-23')
+
+    // Arrow keys: post 24 has one image, so ← goes straight to the previous post; post 25 pages its images first.
+    await userEvent.keyboard('{ArrowLeft}')
+    await screen.findByRole('dialog', { name: 'Post 24' })
+    await userEvent.keyboard('{ArrowLeft}')
+    const top = await screen.findByRole('dialog', { name: 'Post 25' })
+    expect(within(top).queryByRole('button', { name: 'Previous post' })).not.toBeInTheDocument()
+    await userEvent.keyboard('{ArrowRight}')
+    expect(within(top).getByText('2 / 3')).toBeInTheDocument()
+
+    await userEvent.click(within(top).getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(location).toBe('')
+  })
+
   it('opens the popup from a shared ?post= link', async () => {
     renderFeed('/?post=post-3')
     expect(await screen.findByRole('dialog', { name: 'Post 3' })).toBeInTheDocument()

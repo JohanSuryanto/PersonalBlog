@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './auth'
+import { CrashPage } from './components/CrashPage'
 import { SearchPanelProvider } from './components/SearchToggle'
 import './index.css'
 
@@ -17,6 +18,7 @@ const router = createBrowserRouter([
         </SearchPanelProvider>
       </AuthProvider>
     ),
+    errorElement: <CrashPage />,
   },
 ])
 
