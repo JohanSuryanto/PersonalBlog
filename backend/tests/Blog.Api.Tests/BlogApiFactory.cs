@@ -1,8 +1,13 @@
 using System.Net.Http.Json;
+using System.Security.Claims;
 using Blog.Api;
 using Blog.Api.Data;
 using Blog.Api.Models;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -58,15 +63,31 @@ public class BlogApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Author:Password", AuthorPassword);
         builder.UseSetting("Author:DisplayName", "Test Author");
         builder.UseSetting("Comments:RateLimit:PermitLimit", "1000"); // all test requests share one address
+        builder.UseSetting("Authentication:Google:ClientId", "test-client-id");
+        builder.UseSetting("Authentication:Google:ClientSecret", "test-secret");
         builder.ConfigureServices(s =>
         {
             s.RemoveAll<ImageStore>();
             s.AddSingleton<ImageStore>(Images);
+            s.AddSingleton<IStartupFilter, FakeGoogleReturn>();
         });
     }
 
     /// Cookies require HTTPS (Secure flag), so tests talk to https://localhost.
-    public HttpClient Client() => CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+    public HttpClient Client(bool followRedirects = true) => CreateClient(new WebApplicationFactoryClientOptions
+    {
+        BaseAddress = new Uri("https://localhost"),
+        AllowAutoRedirect = followRedirects,
+    });
+
+    /// A client that has just "come back from Google" with these claims (see FakeGoogleReturn); redirects not followed.
+    public async Task<HttpClient> GoogleClientAsync(string sub, string? email, bool? verified = true)
+    {
+        var client = Client(followRedirects: false);
+        var query = $"?sub={Uri.EscapeDataString(sub)}&email={Uri.EscapeDataString(email ?? "")}&verified={verified?.ToString().ToLowerInvariant()}";
+        (await client.GetAsync("/test/external-login" + query)).EnsureSuccessStatusCode();
+        return client;
+    }
 
     public async Task<HttpClient> AuthorClientAsync()
     {
@@ -80,7 +101,8 @@ public class BlogApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     {
         await WithDbAsync(async db =>
         {
-            await db.Database.ExecuteSqlRawAsync("TRUNCATE \"Comments\", \"PostImages\", \"Posts\" RESTART IDENTITY CASCADE");
+            await db.Database.ExecuteSqlRawAsync("TRUNCATE \"Comments\", \"PostImages\", \"Posts\", \"AspNetUserLogins\" RESTART IDENTITY CASCADE");
+            await db.Users.Where(u => u.Email != AuthorEmail).ExecuteDeleteAsync();
             await db.Users.ExecuteUpdateAsync(u => u.SetProperty(x => x.AccessFailedCount, 0).SetProperty(x => x.LockoutEnd, (DateTimeOffset?)null));
         });
         lock (Images.Deleted) Images.Deleted.Clear();
@@ -114,6 +136,28 @@ public class BlogApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await WithDbAsync(async db => { db.Posts.Add(post); await db.SaveChangesAsync(); });
         return post;
     }
+}
+
+/// Stands in for Google's return: signs in to Identity's external cookie the way the Google handler would,
+/// so /api/auth/google/done can be tested without reaching Google.
+class FakeGoogleReturn : IStartupFilter
+{
+    public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+    {
+        // Not app.Map: that would scope the cookie's path to /test/external-login.
+        app.Use(async (ctx, nextMiddleware) =>
+        {
+            if (ctx.Request.Path != "/test/external-login") { await nextMiddleware(); return; }
+            var q = ctx.Request.Query;
+            var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, q["sub"]!) };
+            if (q["email"] is { Count: > 0 } email && email != "") claims.Add(new(ClaimTypes.Email, email!));
+            if (q["verified"] is { Count: > 0 } verified && verified != "") claims.Add(new("email_verified", verified!));
+            var props = new AuthenticationProperties { Items = { ["LoginProvider"] = "Google" } };
+            await ctx.SignInAsync(IdentityConstants.ExternalScheme, new ClaimsPrincipal(new ClaimsIdentity(claims, "Google")), props);
+            ctx.Response.StatusCode = StatusCodes.Status204NoContent;
+        });
+        next(app);
+    };
 }
 
 /// Base class: shares one factory per test class and resets data before each test.

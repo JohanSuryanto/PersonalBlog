@@ -14,6 +14,9 @@ Errors use RFC 7807 Problem Details (`application/problem+json`); validation err
 
 ## Auth
 
+> **Extended by [003-google-login](../../003-google-login/contracts/api.md)**: `GET /api/auth/providers`,
+> `GET /api/auth/google`, `/api/auth/signin-google` and `GET /api/auth/google/done`.
+
 ### 🔓 `POST /api/auth/login`
 Request: `{ "email": "a@b.c", "password": "..." }`
 - `200` `{ "email": "...", "displayName": "..." }` + sets cookie

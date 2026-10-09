@@ -1,6 +1,6 @@
 # Personal Blog
 
-React (Vite) frontend + ASP.NET Core (.NET 10) API, PostgreSQL (Neon) and Cloudinary for images.
+React (Vite) frontend + ASP.NET Core (.NET 9) API, PostgreSQL (Neon) and Cloudinary for images.
 
 - Spec, plan and tasks: [`specs/001-blog-mvp/`](specs/001-blog-mvp/)
 - Run & validate locally: [`specs/001-blog-mvp/quickstart.md`](specs/001-blog-mvp/quickstart.md)
@@ -15,6 +15,7 @@ Never commit secrets. Locally use `dotnet user-secrets` (in `backend/src/Blog.Ap
 | `ConnectionStrings:Blog` | `ConnectionStrings__Blog` | Neon **pooled** string (`-pooler` host, `SSL Mode=Require`) |
 | `Cloudinary:CloudName` / `ApiKey` / `ApiSecret` | `Cloudinary__CloudName` … | From the Cloudinary dashboard |
 | `Author:Email` / `Password` / `DisplayName` | `Author__Email` … | Creates the single author account on first start |
+| `Authentication:Google:ClientId` / `ClientSecret` | `Authentication__Google__ClientId` … | Optional. Enables "Continue with Google" for the author ([spec](specs/003-google-login/)); hidden without them |
 
 Frontend: set `VITE_CLOUDINARY_CLOUD_NAME` (build-time) in `frontend/.env.local` or the host's env settings.
 
@@ -31,6 +32,10 @@ dotnet ef database update --connection "Host=ep-xxx.region.aws.neon.tech;Databas
 ## Deployment
 
 - Backend: `backend/src/Blog.Api/Dockerfile` → any container host.
+- **Sign in with Google** (optional): in Google Cloud Console add `https://<your blog>/api/auth/signin-google` (and
+  `http://localhost:5200/api/auth/signin-google` for local dev) as authorized redirect URIs, and set `Site__Url`
+  so the backend tells Google the public address. Only the author's Google account (verified email equal to
+  `Author:Email`) can sign in; it is linked on first use in `AspNetUserLogins`. No accounts are ever created.
 - Frontend: `npm run build` in `frontend/` → static host. It must rewrite `/api/*` to the backend so the
   login cookie stays same-origin (`frontend/vercel.json` is an example; replace `YOUR-BACKEND-HOST`).
 - The blog name lives in `frontend/src/site.ts`, `frontend/index.html` and the backend `Site:Name` setting.
@@ -42,7 +47,7 @@ dotnet ef database update --connection "Host=ep-xxx.region.aws.neon.tech;Databas
   `frontend/vercel.json` does this by user-agent; on other hosts add the same rule (keep the crawler list in
   sync with `frontend/vite.config.ts`, which does the same locally). Needs `Site__Url` and
   `Cloudinary__CloudName` on the backend. Check a live link with a preview debugger such as opengraph.xyz.
-  Locally: `curl -A WhatsApp http://localhost:5173/posts/<slug>`.
+  Locally: `curl -A WhatsApp http://localhost:5200/posts/<slug>`.
 - Set `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` on the backend when it runs behind a proxy, so the comment
   rate limit (5 per 10 minutes, `Comments:RateLimit`) counts each reader's address, not the proxy's.
 

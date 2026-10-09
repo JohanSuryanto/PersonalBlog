@@ -8,19 +8,22 @@ import { LoginPage } from './LoginPage'
 
 let loginResponse: () => Response
 let loggedIn = false
+let providersResponse: () => Response
 
 beforeEach(() => {
   loggedIn = false
+  providersResponse = () => json({ google: true })
   loginResponse = () => json({ email: 'a@b.c', displayName: 'Johan' })
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     if (url === '/api/auth/me') return loggedIn ? json({ email: 'a@b.c', displayName: 'Johan' }) : json({}, 401)
     if (url === '/api/auth/login') return loginResponse()
+    if (url === '/api/auth/providers') return providersResponse()
     if (url === '/api/profile') return json({ displayName: 'Johan', bio: null, postCount: 1 })
     return json({ items: [], nextCursor: null })
   }))
 })
 
-const renderLogin = () =>
+const renderLogin = (entry = '/login') =>
   render(
     <AuthProvider>
       <RouterProvider
@@ -29,7 +32,7 @@ const renderLogin = () =>
             { path: '/login', element: <LoginPage /> },
             { path: '/admin', element: <h1>Dashboard page</h1> },
           ],
-          { initialEntries: ['/login'] },
+          { initialEntries: [entry] },
         )}
       />
     </AuthProvider>,
@@ -88,6 +91,39 @@ describe('LoginPage', () => {
   it('has no accessibility violations', async () => {
     const { container } = renderLogin()
     await screen.findByRole('heading', { name: 'Welcome back' })
+    await screen.findByRole('link', { name: 'Continue with Google' })
     await expectNoA11yViolations(container)
+  })
+
+  it('offers Google sign-in as a full-page link', async () => {
+    renderLogin()
+    expect(await screen.findByRole('link', { name: 'Continue with Google' })).toHaveAttribute('href', '/api/auth/google')
+  })
+
+  it.each([
+    ['disabled', () => json({ google: false })],
+    ['unavailable', () => json({}, 500)],
+  ])('hides Google sign-in when %s', async (_, response) => {
+    providersResponse = response
+    renderLogin()
+    await screen.findByRole('heading', { name: 'Welcome back' })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(screen.queryByRole('link', { name: 'Continue with Google' })).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['cancelled', 'Google sign-in was cancelled. Please try again.'],
+    ['failed', 'Google sign-in failed. Please try again.'],
+    ['not-allowed', "This Google account can't sign in here."],
+    ['locked', 'Too many failed attempts. Please wait before trying again.'],
+  ])('explains Google error %s', async (code, message) => {
+    renderLogin(`/login?error=${code}`)
+    expect(await screen.findByRole('alert')).toHaveTextContent(message)
+  })
+
+  it('ignores unknown error codes', async () => {
+    renderLogin('/login?error=whatever')
+    await screen.findByRole('heading', { name: 'Welcome back' })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

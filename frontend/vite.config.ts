@@ -8,6 +8,8 @@ const crawler = /bot|crawler|spider|facebookexternalhit|whatsapp|slack|discord|t
 export default defineConfig({
   plugins: [react()],
   server: {
+    port: 5200,
+    strictPort: true, // fail loudly instead of silently moving to another port (RSS/preview links use Site:Url)
     proxy: {
       // Same as production: crawlers asking for a post (or the feed popup URL) get the backend's preview page.
       '^/(posts/[^/?#]+|\\?(.*&)?post=[^&]+)': {

@@ -2,7 +2,7 @@
 
 Prerequisites are the same as [001 quickstart](../../001-blog-mvp/quickstart.md): Docker running,
 the local Postgres container on port 5433, the API on http://localhost:5000 and the frontend on
-http://localhost:5173.
+http://localhost:5200.
 
 ## 1. Apply the migration
 

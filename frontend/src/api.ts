@@ -114,6 +114,7 @@ export const api = {
   login: (email: string, password: string) => request<Me>('POST', '/api/auth/login', { email, password }),
   logout: () => request<void>('POST', '/api/auth/logout'),
   me: () => request<Me>('GET', '/api/auth/me'),
+  providers: () => request<{ google: boolean }>('GET', '/api/auth/providers'),
 
   feed: (query: FeedQuery) => {
     const params = new URLSearchParams()

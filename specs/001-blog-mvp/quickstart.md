@@ -31,7 +31,7 @@ dotnet run                     # API on http://localhost:5000
 # Frontend (separate terminal) — Vite proxies /api to the backend
 cd frontend
 npm install
-npm run dev                    # http://localhost:5173
+npm run dev                    # http://localhost:5200
 ```
 
 For Neon: use the **pooled** connection string (`...-pooler...`, `SSL Mode=Require`) for the app and

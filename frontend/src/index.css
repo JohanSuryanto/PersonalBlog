@@ -361,6 +361,14 @@ textarea { resize: vertical; line-height: 1.6; }
 :root[data-theme='dark'] .hint-warning { color: #ffc46b; }
 .login-submit { width: 100%; padding: 0.7rem 1rem; font-size: 1rem; }
 .login-back { margin-top: 1.5rem; }
+.login-divider { display: flex; align-items: center; gap: 0.75rem; margin: 1.25rem 0; color: var(--muted); font-size: 0.85rem; }
+.login-divider::before, .login-divider::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
+.google-login {
+  display: flex; align-items: center; justify-content: center; gap: 0.6rem; width: 100%;
+  padding: 0.7rem 1rem; font-size: 1rem; font-weight: 600; color: var(--fg);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+}
+.google-login:hover { background: var(--surface-2); text-decoration: none; }
 .spinner {
   width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent;
   animation: spin 0.7s linear infinite;

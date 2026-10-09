@@ -4,6 +4,7 @@ using Blog.Api;
 using Blog.Api.Data;
 using Blog.Api.Endpoints;
 using Blog.Api.Models;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +13,37 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<BlogDbContext>(o =>
     o.UseNpgsql(builder.Configuration.GetConnectionString("Blog"), npgsql => npgsql.EnableRetryOnFailure()));
 
-builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
+var authentication = builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme);
+authentication.AddIdentityCookies();
+// Google sign-in only when configured; without it the login page hides the button.
+if (builder.Configuration["Authentication:Google:ClientId"] is { Length: > 0 } googleClientId
+    && builder.Configuration["Authentication:Google:ClientSecret"] is { Length: > 0 } googleClientSecret)
+{
+    authentication.AddGoogle(o =>
+    {
+        o.ClientId = googleClientId;
+        o.ClientSecret = googleClientSecret;
+        o.SignInScheme = IdentityConstants.ExternalScheme;
+        o.CallbackPath = "/api/auth/signin-google";
+        o.UsePkce = true;
+        o.SaveTokens = false;
+        o.ClaimActions.MapJsonKey("email_verified", "email_verified");
+        o.Events.OnAccessDenied = ctx =>
+        {
+            ctx.Response.Redirect("/login?error=cancelled");
+            ctx.HandleResponse();
+            return Task.CompletedTask;
+        };
+        o.Events.OnRemoteFailure = ctx =>
+        {
+            ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>()
+                .LogWarning("Google sign-in failed: {Message}", ctx.Failure?.Message);
+            ctx.Response.Redirect("/login?error=failed");
+            ctx.HandleResponse();
+            return Task.CompletedTask;
+        };
+    });
+}
 builder.Services.ConfigureApplicationCookie(o =>
 {
     o.Cookie.Name = "blog_auth";
@@ -67,6 +98,23 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 if (app.Environment.IsDevelopment()) app.MapOpenApi();
+
+// The host forwards /api/* here under the backend's own name; Google must see the public address
+// in redirect_uri so its cookies land on the blog's origin.
+// ponytail: relies on the frontend host proxying /api/* to this backend (vercel.json, vite.config.ts)
+if (app.Configuration["Site:Url"] is { Length: > 0 } siteUrl)
+{
+    var site = new Uri(siteUrl);
+    app.Use((ctx, next) =>
+    {
+        if (ctx.Request.Path.StartsWithSegments("/api/auth"))
+        {
+            ctx.Request.Scheme = site.Scheme;
+            ctx.Request.Host = HostString.FromUriComponent(site);
+        }
+        return next();
+    });
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
