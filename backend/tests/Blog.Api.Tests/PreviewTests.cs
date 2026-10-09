@@ -29,7 +29,7 @@ public class PreviewTests(BlogApiFactory factory) : ApiTest(factory)
         Assert.Equal("Beach day", Meta(html, "og:title"));
         Assert.Equal("Salt air and sun", Meta(html, "og:description"));
         Assert.Equal($"https://blog.example/posts/{post.Slug}", Meta(html, "og:url"));
-        Assert.Equal("Test Author's blog", Meta(html, "og:site_name"));
+        Assert.Equal("Johan's Journal", Meta(html, "og:site_name"));
         Assert.Equal("https://res.cloudinary.com/testcloud/image/upload/c_fill,g_auto,w_1200,h_630,f_jpg,q_auto/blog/Beach day-1",
             Meta(html, "og:image"));
         Assert.Equal("summary_large_image", Meta(html, "twitter:card"));

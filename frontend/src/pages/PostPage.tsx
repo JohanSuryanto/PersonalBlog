@@ -8,6 +8,7 @@ import { Icon } from '../components/Icon'
 import { ImageSlider } from '../components/ImageSlider'
 import { Toast } from '../components/Toast'
 import { formatDate, readingMinutes } from '../format'
+import { SITE_NAME } from '../site'
 
 export function PostPage() {
   const { slug = '' } = useParams()
@@ -25,10 +26,10 @@ export function PostPage() {
   useEffect(() => {
     setState('loading')
     api.post(slug).then(
-      (p) => { setPost(p); setState('ok'); document.title = `${p.title} · Personal Blog` },
+      (p) => { setPost(p); setState('ok'); document.title = `${p.title} · ${SITE_NAME}` },
       (err) => setState(err instanceof ApiError && err.status === 404 ? 'notfound' : 'error'),
     )
-    return () => { document.title = 'Personal Blog' }
+    return () => { document.title = SITE_NAME }
   }, [slug])
 
   // Feed card comment links open the post at its comments.

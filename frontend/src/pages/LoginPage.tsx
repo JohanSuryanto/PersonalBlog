@@ -3,8 +3,9 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { api, ApiError, type Image } from '../api'
 import { useAuth } from '../auth'
 import { imageUrl } from '../cloudinary'
-import { Avatar } from '../components/Avatar'
 import { Icon } from '../components/Icon'
+import { LogoMark } from '../components/Logo'
+import { SITE_NAME } from '../site'
 
 export function LoginPage() {
   const { user, loading, setUser } = useAuth()
@@ -19,12 +20,10 @@ export function LoginPage() {
   const [lockedUntil, setLockedUntil] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const [photos, setPhotos] = useState<Image[]>([])
-  const [author, setAuthor] = useState('')
 
   // Decorative collage of recent post photos for the brand panel.
   useEffect(() => {
     api.feed({}).then((page) => setPhotos(page.items.flatMap((p) => p.images).slice(0, 6)), () => {})
-    api.profile().then((p) => setAuthor(p.displayName), () => {})
   }, [])
 
   // Live lockout countdown.
@@ -78,8 +77,8 @@ export function LoginPage() {
           {photos.map((img) => <img key={img.publicId} src={imageUrl(img.publicId, 400)} alt="" loading="lazy" />)}
         </div>
         <div className="login-brand-text">
-          <Avatar name={author || 'Personal Blog'} size={64} />
-          <p className="login-brand-title">{author ? `${author}'s blog` : 'Personal Blog'}</p>
+          <LogoMark size={64} />
+          <p className="login-brand-title">{SITE_NAME}</p>
           <p>Stories, photos and notes — written in one place, shared with everyone.</p>
         </div>
       </aside>

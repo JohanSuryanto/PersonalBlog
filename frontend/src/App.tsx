@@ -2,9 +2,11 @@ import { lazy, Suspense, type ComponentType } from 'react'
 import { Link, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuth } from './auth'
 import { Icon } from './components/Icon'
+import { LogoMark } from './components/Logo'
 import { RequireAuth } from './components/RequireAuth'
 import { SearchToggle } from './components/SearchToggle'
 import { FeedPage } from './pages/FeedPage'
+import { SITE_NAME } from './site'
 import { useTheme } from './theme'
 
 // Readers land on the feed; everything else (post page, login, author tools) loads on demand.
@@ -30,7 +32,8 @@ export default function App() {
       <header className="site-header">
         <div className="site-header-inner">
           <Link to="/" className="brand">
-            Personal Blog
+            <LogoMark size={30} />
+            <span className="brand-name">{SITE_NAME}</span>
           </Link>
           <nav aria-label="Main">
             <SearchToggle />

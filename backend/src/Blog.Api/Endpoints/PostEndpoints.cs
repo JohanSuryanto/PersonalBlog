@@ -113,7 +113,7 @@ public static class PostEndpoints
             .Select(p => new { p.Slug, p.Title, p.Excerpt, PublishedAt = p.PublishedAt!.Value })
             .ToListAsync();
 
-        var title = string.IsNullOrEmpty(author) ? "Personal Blog" : $"{author}'s blog";
+        var title = config["Site:Name"] ?? (string.IsNullOrEmpty(author) ? "Blog" : $"{author}'s blog");
         var rss = new XDocument(new XDeclaration("1.0", "utf-8", null), new XElement("rss", new XAttribute("version", "2.0"),
             new XElement("channel",
                 new XElement("title", title),

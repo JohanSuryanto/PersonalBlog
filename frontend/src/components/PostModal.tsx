@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { api, type Comment, type PostDetail } from '../api'
 import { useAuth } from '../auth'
 import { formatDate } from '../format'
+import { SITE_NAME } from '../site'
 import { Avatar } from './Avatar'
 import { CommentSection } from './CommentSection'
 import { Icon } from './Icon'
@@ -50,7 +51,7 @@ export function PostModal({ postId, slug, highlight, toComments, onClose, onDele
   useEffect(() => {
     if (!post) return
     const previous = document.title
-    document.title = `${post.title} · Personal Blog`
+    document.title = `${post.title} · ${SITE_NAME}`
     return () => { document.title = previous }
   }, [post])
 

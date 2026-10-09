@@ -134,10 +134,15 @@ textarea { resize: vertical; line-height: 1.6; }
 }
 .site-header::before { content: ''; display: block; height: 3px; background: var(--sunset); }
 .site-header-inner { max-width: 900px; margin: 0 auto; padding: 0.6rem 1rem; display: flex; align-items: center; gap: 0.5rem; }
-.brand {
-  font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; font-style: italic; letter-spacing: -0.01em;
+.brand { display: inline-flex; align-items: center; gap: 0.55rem; }
+.brand .logo-mark { flex: none; filter: drop-shadow(0 2px 6px rgba(255, 94, 126, 0.35)); transition: transform 0.25s ease; }
+.brand:hover .logo-mark { transform: rotate(-8deg) scale(1.05); }
+@media (prefers-reduced-motion: reduce) { .brand:hover .logo-mark { transform: none; } }
+.brand-name {
+  font-family: var(--font-display); font-size: 1.45rem; font-weight: 700; font-style: italic; letter-spacing: -0.01em; white-space: nowrap;
   color: var(--accent); background: var(--brand-ink); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
 }
+@media (max-width: 420px) { .brand-name { font-size: 1.2rem; } }
 .brand:hover { text-decoration: none; }
 .site-header nav { margin-left: auto; display: flex; align-items: center; gap: 0.25rem; }
 .site-header nav a { padding: 0.4rem 0.75rem; border-radius: 8px; color: var(--fg); font-weight: 600; }
@@ -337,7 +342,7 @@ textarea { resize: vertical; line-height: 1.6; }
   background: linear-gradient(to top, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.05) 60%);
 }
 .login-brand-text { position: relative; z-index: 1; padding: 2.5rem; max-width: 26rem; }
-.login-brand-text .avatar > span { background: rgba(255, 255, 255, 0.15); border-color: transparent; color: #fff; }
+.login-brand-text .logo-mark { filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25)); }
 .login-brand-title { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; margin: 1rem 0 0.25rem; }
 .login-brand-text p:last-child { margin: 0; opacity: 0.9; line-height: 1.5; }
 

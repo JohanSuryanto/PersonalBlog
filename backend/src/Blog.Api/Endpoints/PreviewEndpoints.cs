@@ -25,7 +25,7 @@ public static class PreviewEndpoints
 
             var author = await db.Users.Select(u => u.DisplayName).FirstOrDefaultAsync() ?? "";
             var site = (config["Site:Url"] ?? $"{request.Scheme}://{request.Host}").TrimEnd('/');
-            var siteName = string.IsNullOrEmpty(author) ? "Personal Blog" : $"{author}'s blog";
+            var siteName = config["Site:Name"] ?? (string.IsNullOrEmpty(author) ? "Blog" : $"{author}'s blog");
             var url = $"{site}/posts/{slug}";
             var cloud = config["Cloudinary:CloudName"];
             // 1200×630 is the size every major preview (Facebook, X, LinkedIn, WhatsApp, Slack) handles well.

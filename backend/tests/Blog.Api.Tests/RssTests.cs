@@ -17,7 +17,7 @@ public class RssTests(BlogApiFactory factory) : ApiTest(factory)
         Assert.Equal("application/rss+xml", res.Content.Headers.ContentType?.MediaType);
 
         var channel = XDocument.Parse(await res.Content.ReadAsStringAsync()).Root!.Element("channel")!;
-        Assert.Equal("Test Author's blog", channel.Element("title")!.Value);
+        Assert.Equal("Johan's Journal", channel.Element("title")!.Value);
         var items = channel.Elements("item").ToList();
         Assert.Equal(["Newer", "Older <one>"], items.Select(i => i.Element("title")!.Value));
         Assert.Equal($"https://localhost/posts/{newer.Slug}", items[0].Element("link")!.Value);
