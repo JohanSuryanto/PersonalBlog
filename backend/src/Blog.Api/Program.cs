@@ -77,6 +77,7 @@ app.MapPostEndpoints();
 app.MapAdminPostEndpoints();
 app.MapImageEndpoints();
 app.MapCommentEndpoints();
+app.MapPreviewEndpoints();
 
 await AuthorSeeder.SeedAsync(app.Services);
 

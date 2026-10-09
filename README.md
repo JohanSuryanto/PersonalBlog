@@ -35,6 +35,13 @@ dotnet ef database update --connection "Host=ep-xxx.region.aws.neon.tech;Databas
   login cookie stays same-origin (`frontend/vercel.json` is an example; replace `YOUR-BACKEND-HOST`).
 - Set `Site__Url` (e.g. `https://myblog.example`) on the backend so the RSS feed (`/api/rss.xml`) links to the
   public site rather than the backend host.
+- **Link previews** (WhatsApp, Slack, X, Facebook, LinkedIn…): their crawlers don't run JavaScript, so the
+  frontend host must send crawler requests for `/posts/{slug}` and `/?post={slug}` to the backend's
+  `/api/preview/posts/{slug}`, which returns Open Graph tags with a 1200×630 cover from Cloudinary.
+  `frontend/vercel.json` does this by user-agent; on other hosts add the same rule (keep the crawler list in
+  sync with `frontend/vite.config.ts`, which does the same locally). Needs `Site__Url` and
+  `Cloudinary__CloudName` on the backend. Check a live link with a preview debugger such as opengraph.xyz.
+  Locally: `curl -A WhatsApp http://localhost:5173/posts/<slug>`.
 - Set `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` on the backend when it runs behind a proxy, so the comment
   rate limit (5 per 10 minutes, `Comments:RateLimit`) counts each reader's address, not the proxy's.
 
