@@ -113,7 +113,7 @@ if (app.Configuration["Site:Url"] is { Length: > 0 } siteUrl)
         if (ctx.Request.Path.StartsWithSegments("/api/auth"))
         {
             ctx.Request.Scheme = site.Scheme;
-            ctx.Request.Host = HostString.FromUriComponent(site);
+            ctx.Request.Host = new HostString(site.Authority); // Authority drops default ports; Google matches redirect_uri exactly
         }
         return next();
     });

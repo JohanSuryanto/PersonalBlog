@@ -56,6 +56,15 @@ public class GoogleLoginTests(BlogApiFactory factory) : ApiTest(factory)
     }
 
     [Fact]
+    public async Task Google_redirect_uri_uses_the_public_site_url_without_default_port()
+    {
+        var client = Factory.WithWebHostBuilder(b => b.UseSetting("Site:Url", "https://blog.example"))
+            .CreateClient(new() { AllowAutoRedirect = false, BaseAddress = new Uri("https://backend.internal") });
+        var res = await client.GetAsync("/api/auth/google");
+        Assert.Contains("redirect_uri=https%3A%2F%2Fblog.example%2Fapi%2Fauth%2Fsignin-google&", res.Headers.Location!.ToString());
+    }
+
+    [Fact]
     public async Task First_sign_in_with_verified_author_email_links_and_signs_in()
     {
         var client = await Factory.GoogleClientAsync("sub-1", Author);
