@@ -40,7 +40,7 @@ the **direct** string when running `dotnet ef database update`.
 ## Automated checks (must pass before merge — Constitution III)
 
 ```powershell
-dotnet test backend            # integration tests against a real Postgres container
+dotnet test --solution backend/Blog.sln          # integration tests against a real Postgres container
 cd frontend; npm test          # Vitest: feed hook, slider, editor limit, axe a11y checks
 ```
 

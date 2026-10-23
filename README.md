@@ -1,10 +1,35 @@
 # Personal Blog
 
-React (Vite) frontend + ASP.NET Core (.NET 9) API, PostgreSQL (Neon) and Cloudinary for images.
+React (Vite) frontend + ASP.NET Core (.NET 10) API, PostgreSQL (Neon) and Cloudinary for images.
 
 - Spec, plan and tasks: [`specs/001-blog-mvp/`](specs/001-blog-mvp/)
 - Run & validate locally: [`specs/001-blog-mvp/quickstart.md`](specs/001-blog-mvp/quickstart.md)
 - API contract: [`specs/001-blog-mvp/contracts/api.md`](specs/001-blog-mvp/contracts/api.md)
+
+## Run locally
+
+Needs .NET 10 SDK, Node.js 22+ and Docker Desktop (running).
+
+```powershell
+# 1. Database (first time only: create; afterwards just start it)
+docker run -d --name blog-pg -e POSTGRES_PASSWORD=dev -p 5433:5432 postgres:17
+docker start blog-pg
+
+# 2. Backend secrets (first time only), from backend/src/Blog.Api
+dotnet user-secrets set "ConnectionStrings:Blog" "Host=localhost;Port=5433;Database=blog;Username=postgres;Password=dev"
+dotnet user-secrets set "Author:Email" "you@example.com"
+dotnet user-secrets set "Author:Password" "<strong password>"
+dotnet user-secrets set "Author:DisplayName" "<your name>"
+dotnet ef database update      # apply migrations (also after pulling new ones)
+
+# 3. Backend → http://localhost:5000
+cd backend; .\run
+
+# 4. Frontend (second terminal) → http://localhost:5200, proxies /api to :5000
+cd frontend; npm install; npm run dev
+```
+
+Open http://localhost:5200 (log in at `/login`). Image uploads also need the Cloudinary keys below.
 
 ## Secrets
 
@@ -54,6 +79,6 @@ dotnet ef database update --connection "Host=ep-xxx.region.aws.neon.tech;Databas
 ## Tests
 
 ```powershell
-dotnet test backend      # needs Docker running (real Postgres via Testcontainers)
+dotnet test --solution backend/Blog.sln   # needs Docker running (real Postgres via Testcontainers)
 cd frontend; npm test
 ```
