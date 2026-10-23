@@ -112,10 +112,35 @@ public class GoogleLoginTests(BlogApiFactory factory) : ApiTest(factory)
 
     // US2
 
+    // Spec 004: a new verified email becomes a contributor instead of being refused.
     [Fact]
-    public async Task Unknown_email_is_refused_and_creates_nothing()
+    public async Task Unknown_verified_email_creates_a_contributor()
     {
-        await AssertRefusedAsync(await Factory.GoogleClientAsync("sub-x", "stranger@example.com"));
+        var client = await Factory.GoogleClientAsync("sub-x", "stranger@example.com", name: "Stranger Danger");
+        var res = await DoneAsync(client);
+        Assert.Equal("/admin", res.Headers.Location?.OriginalString);
+
+        var me = await client.GetFromJsonAsync<JsonElement>("/api/auth/me");
+        Assert.Equal("stranger@example.com", me.GetProperty("email").GetString());
+        Assert.Equal("Stranger Danger", me.GetProperty("displayName").GetString());
+        Assert.False(me.GetProperty("isOwner").GetBoolean());
+        var (users, links) = await CountsAsync();
+        Assert.Equal(2, users);
+        Assert.Equal(["sub-x"], links);
+    }
+
+    [Fact]
+    public async Task Contributor_without_name_claim_gets_email_prefix_as_name()
+    {
+        var client = await Factory.GoogleClientAsync("sub-x", "stranger@example.com");
+        await DoneAsync(client);
+        Assert.Equal("stranger", (await client.GetFromJsonAsync<JsonElement>("/api/auth/me")).GetProperty("displayName").GetString());
+    }
+
+    [Fact]
+    public async Task Unknown_unverified_email_is_refused_and_creates_nothing()
+    {
+        await AssertRefusedAsync(await Factory.GoogleClientAsync("sub-x", "stranger@example.com", verified: false));
         Assert.Empty((await CountsAsync()).Links);
     }
 

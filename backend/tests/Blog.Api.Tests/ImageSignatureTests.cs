@@ -17,7 +17,7 @@ public class ImageSignatureTests(BlogApiFactory factory) : ApiTest(factory)
         var author = await Factory.AuthorClientAsync();
         var sig = await (await author.PostAsync("/api/images/signature", null)).Content.ReadFromJsonAsync<JsonElement>();
 
-        foreach (var field in new[] { "cloudName", "apiKey", "timestamp", "folder", "allowedFormats", "signature" })
+        foreach (var field in new[] { "cloudName", "apiKey", "timestamp", "folder", "allowedFormats", "publicId", "signature" })
             Assert.True(sig.TryGetProperty(field, out _), field);
         Assert.False(sig.TryGetProperty("apiSecret", out _));
     }
@@ -32,7 +32,7 @@ public class ImageSignatureTests(BlogApiFactory factory) : ApiTest(factory)
         var sig = new ImageStore(config, Microsoft.Extensions.Logging.Abstractions.NullLogger<ImageStore>.Instance).CreateUploadSignature();
 
         // Cloudinary: sha1 of sorted "k=v&k=v" params + api secret.
-        var toSign = $"allowed_formats={sig.AllowedFormats}&folder={sig.Folder}&timestamp={sig.Timestamp}secret";
+        var toSign = $"allowed_formats={sig.AllowedFormats}&folder={sig.Folder}&overwrite=false&public_id={sig.PublicId}&timestamp={sig.Timestamp}secret";
         var expected = Convert.ToHexStringLower(System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes(toSign)));
         Assert.Equal(expected, sig.Signature);
     }

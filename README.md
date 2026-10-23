@@ -39,8 +39,10 @@ Never commit secrets. Locally use `dotnet user-secrets` (in `backend/src/Blog.Ap
 |---|---|---|
 | `ConnectionStrings:Blog` | `ConnectionStrings__Blog` | Neon **pooled** string (`-pooler` host, `SSL Mode=Require`) |
 | `Cloudinary:CloudName` / `ApiKey` / `ApiSecret` | `Cloudinary__CloudName` … | From the Cloudinary dashboard |
-| `Author:Email` / `Password` / `DisplayName` | `Author__Email` … | Creates the single author account on first start |
-| `Authentication:Google:ClientId` / `ClientSecret` | `Authentication__Google__ClientId` … | Optional. Enables "Continue with Google" for the author ([spec](specs/003-google-login/)); hidden without them |
+| `Author:Email` / `Password` / `DisplayName` | `Author__Email` … | Creates the owner account on first start and gives it the `Owner` role on every start |
+| `Authentication:Google:ClientId` / `ClientSecret` | `Authentication__Google__ClientId` … | Optional. Enables "Continue with Google" ([spec](specs/003-google-login/)); hidden without them |
+| `Contributors:SignupEnabled` | `Contributors__SignupEnabled` | Default `true`. `false` stops new writers signing up; existing writers and the owner still sign in |
+| `Images:ContributorUploadsPerDay` | `Images__ContributorUploadsPerDay` | Default `30`. Image uploads per writer per day (the owner is not limited) |
 
 Frontend: set `VITE_CLOUDINARY_CLOUD_NAME` (build-time) in `frontend/.env.local` or the host's env settings.
 
@@ -59,8 +61,11 @@ dotnet ef database update --connection "Host=ep-xxx.region.aws.neon.tech;Databas
 - Backend: `backend/src/Blog.Api/Dockerfile` → any container host.
 - **Sign in with Google** (optional): in Google Cloud Console add `https://<your blog>/api/auth/signin-google` (and
   `http://localhost:5200/api/auth/signin-google` for local dev) as authorized redirect URIs, and set `Site__Url`
-  so the backend tells Google the public address. Only the author's Google account (verified email equal to
-  `Author:Email`) can sign in; it is linked on first use in `AspNetUserLogins`. No accounts are ever created.
+  so the backend tells Google the public address. The owner's Google account (verified email equal to
+  `Author:Email`) is linked on first use in `AspNetUserLogins`. Any other verified Google account becomes a
+  **contributor** ([spec](specs/004-contributor-posts/)): their posts wait for the owner's approval, at most 2 at a
+  time, and they can't moderate comments. After deploying spec 004, the owner signs out and back in once to pick up
+  the `Owner` role.
 - Frontend: `npm run build` in `frontend/` → static host. It must rewrite `/api/*` to the backend so the
   login cookie stays same-origin (`frontend/vercel.json` points at `johans-journal-api.onrender.com`; change it if the backend moves).
 - The blog name lives in `frontend/src/site.ts`, `frontend/index.html` and the backend `Site:Name` setting.

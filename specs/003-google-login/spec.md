@@ -148,6 +148,8 @@ it still works.
 
 ## Assumptions
 
+- Superseded in part by [spec 004](../004-contributor-posts/spec.md): verified unknown emails now create
+  contributor accounts.
 - The blog keeps a single author account; Google sign-in is for that author only. Readers still
   comment without accounts.
 - Matching to the existing account is by the Google account's verified email on first use, then by

@@ -28,6 +28,9 @@ export async function uploadImage(file: File, sig: UploadSignature): Promise<Ima
   form.append('timestamp', String(sig.timestamp))
   form.append('folder', sig.folder)
   form.append('allowed_formats', sig.allowedFormats)
+  // Signed by the API: each signature creates exactly one image with this name.
+  form.append('public_id', sig.publicId)
+  form.append('overwrite', 'false')
   form.append('signature', sig.signature)
 
   const res = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: form })

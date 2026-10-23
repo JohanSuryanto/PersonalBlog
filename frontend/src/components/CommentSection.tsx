@@ -22,7 +22,9 @@ export function CommentSection({ slug, count, onCountChange, highlight, onDelete
   highlight?: number
   onDeleted?: (comment: Comment) => void
 }) {
-  const { user } = useAuth()
+  // Only the owner comments with their account (badge, delete); contributors comment like visitors.
+  const { user: me } = useAuth()
+  const user = me?.isOwner ? me : null
   const [comments, setComments] = useState<Comment[]>([])
   const [cursor, setCursor] = useState<number | undefined>()
   const [hasMore, setHasMore] = useState(false)

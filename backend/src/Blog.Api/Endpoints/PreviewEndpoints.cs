@@ -17,15 +17,16 @@ public static class PreviewEndpoints
                 .Where(p => p.Slug == slug && p.Status == PostStatus.Published)
                 .Select(p => new
                 {
-                    p.Title, p.Excerpt, PublishedAt = p.PublishedAt!.Value,
+                    p.Title, p.Excerpt, p.AuthorId, PublishedAt = p.PublishedAt!.Value,
                     Cover = p.Images.OrderBy(i => i.Position).Select(i => new { i.PublicId, i.AltText }).FirstOrDefault(),
                 })
                 .FirstOrDefaultAsync();
             if (post is null) return Results.NotFound();
 
-            var author = await db.Users.Select(u => u.DisplayName).FirstOrDefaultAsync() ?? "";
+            var author = await PostEndpoints.WriterNameAsync(db, post.AuthorId);
+            var owner = await PostEndpoints.OwnerNameAsync(db);
             var site = (config["Site:Url"] ?? $"{request.Scheme}://{request.Host}").TrimEnd('/');
-            var siteName = config["Site:Name"] ?? (string.IsNullOrEmpty(author) ? "Blog" : $"{author}'s blog");
+            var siteName = config["Site:Name"] ?? (string.IsNullOrEmpty(owner) ? "Blog" : $"{owner}'s blog");
             var url = $"{site}/posts/{slug}";
             var cloud = config["Cloudinary:CloudName"];
             // 1200×630 is the size every major preview (Facebook, X, LinkedIn, WhatsApp, Slack) handles well.

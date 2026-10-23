@@ -12,6 +12,7 @@ const comment = (id: number, over: Partial<Comment> = {}): Comment => ({
 })
 
 let loggedIn: boolean
+let isOwner: boolean
 let pages: Record<string, { items: Comment[]; hasMore: boolean }>
 let postResponse: (body: { name: string; body: string; website: string }) => Response
 let fetchMock: ReturnType<typeof vi.fn>
@@ -19,10 +20,11 @@ let fetchMock: ReturnType<typeof vi.fn>
 beforeEach(() => {
   localStorage.clear()
   loggedIn = false
+  isOwner = true
   pages = { '': { items: [], hasMore: false } }
   postResponse = (b) => json(comment(99, { name: b.name, body: b.body }), 201)
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-    if (url === '/api/auth/me') return loggedIn ? json({ email: 'a@b.c', displayName: 'Johan' }) : json({}, 401)
+    if (url === '/api/auth/me') return loggedIn ? json({ email: 'a@b.c', displayName: 'Johan', isOwner }) : json({}, 401)
     if (init?.method === 'POST') return postResponse(JSON.parse(String(init.body)))
     if (init?.method === 'DELETE') return new Response(null, { status: 204 })
     return json(pages[new URL(url, 'http://x').searchParams.get('after') ?? ''])
@@ -172,6 +174,16 @@ describe('CommentSection', () => {
     await waitFor(() => expect(screen.queryByText('Comment 1')).not.toBeInTheDocument())
     expect(fetchMock).toHaveBeenCalledWith('/api/admin/comments/1', expect.objectContaining({ method: 'DELETE' }))
     expect(onCountChange).toHaveBeenCalledWith(1)
+  })
+
+  it('treats a signed-in contributor like a reader: name field, no delete', async () => {
+    loggedIn = true
+    isOwner = false
+    pages[''] = { items: [comment(1)], hasMore: false }
+    renderSection(1)
+    await screen.findByText('Comment 1')
+    expect(screen.getByLabelText('Name')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Delete/ })).not.toBeInTheDocument()
   })
 
   it('has no accessibility violations', async () => {

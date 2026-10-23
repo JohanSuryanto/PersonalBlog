@@ -15,6 +15,7 @@ export type FeedItem = {
   publishedAt: string
   images: Image[]
   commentCount?: number
+  authorName?: string
 }
 
 export type Profile = { displayName: string; bio: string | null; postCount: number }
@@ -23,7 +24,20 @@ export type FeedPage = { items: FeedItem[]; nextCursor: string | null }
 
 export type FeedQuery = { cursor?: string | null; q?: string; from?: string; to?: string }
 
-export type PostStatus = 'Draft' | 'Published'
+export type PostStatus = 'Draft' | 'Published' | 'Pending' | 'Rejected'
+
+export const STATUS_LABEL: Record<PostStatus, string> = {
+  Draft: 'Draft',
+  Published: 'Published',
+  Pending: 'Waiting for approval',
+  Rejected: 'Rejected',
+}
+
+/** Contributors may have this many posts waiting for approval at once (enforced by the API). */
+export const MAX_PENDING = 2
+
+/** Fired after the owner approves, rejects or blocks, so the header badge refreshes without a page change. */
+export const PENDING_CHANGED = 'blog:pending-changed'
 
 export type PostDetail = {
   id: number
@@ -38,6 +52,7 @@ export type PostDetail = {
   newer?: PostLink | null
   older?: PostLink | null
   commentCount?: number
+  reviewNote?: string | null
 }
 
 export type Comment = { id: number; name: string; body: string; isAuthor: boolean; createdAt: string }
@@ -63,6 +78,10 @@ export type AdminPostSummary = {
   publishedAt: string | null
   imageCount: number
   coverPublicId: string | null
+  authorId: string
+  authorName: string
+  reviewNote: string | null
+  submittedAt: string | null
 }
 
 export type PostInput = {
@@ -78,10 +97,13 @@ export type UploadSignature = {
   timestamp: number
   folder: string
   allowedFormats: string
+  publicId: string
   signature: string
 }
 
-export type Me = { email: string; displayName: string }
+export type BlockedWriter = { id: string; displayName: string; email: string }
+
+export type Me = { email: string; displayName: string; isOwner: boolean }
 
 export class ApiError extends Error {
   status: number
@@ -134,6 +156,12 @@ export const api = {
   createPost: (input: PostInput) => request<PostDetail>('POST', '/api/admin/posts', input),
   updatePost: (id: number, input: PostInput) => request<PostDetail>('PUT', `/api/admin/posts/${id}`, input),
   deletePost: (id: number) => request<void>('DELETE', `/api/admin/posts/${id}`),
+  pendingCount: () => request<number>('GET', '/api/admin/posts/pending-count'),
+  approvePost: (id: number) => request<PostDetail>('POST', `/api/admin/posts/${id}/approve`),
+  rejectPost: (id: number, note: string) => request<PostDetail>('POST', `/api/admin/posts/${id}/reject`, { note }),
+  blockedWriters: () => request<BlockedWriter[]>('GET', '/api/admin/writers/blocked'),
+  blockWriter: (id: string) => request<void>('POST', `/api/admin/writers/${encodeURIComponent(id)}/block`),
+  unblockWriter: (id: string) => request<void>('POST', `/api/admin/writers/${encodeURIComponent(id)}/unblock`),
   adminComments: (before?: number) =>
     request<AdminCommentPage>('GET', `/api/admin/comments${before ? `?before=${before}` : ''}`),
   deleteComment: (id: number) => request<void>('DELETE', `/api/admin/comments/${id}`),

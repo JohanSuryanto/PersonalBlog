@@ -19,6 +19,7 @@ const post = (id: number): FeedItem => ({
   publishedAt: '2026-10-01T10:00:00Z',
   images: id === 25 ? [image(1), image(2), image(3)] : id === 24 ? [image(4)] : [],
   commentCount: id === 25 ? 2 : 0,
+  authorName: id === 24 ? 'Guest Writer' : 'Johan',
 })
 
 let fetchMock: ReturnType<typeof vi.fn>
@@ -78,6 +79,12 @@ beforeEach(() => {
 })
 
 describe('FeedPage feed', () => {
+  it("shows each post's writer on its card", async () => {
+    renderFeed()
+    const card = (await screen.findByText('Post 24')).closest('article')!
+    expect(within(card).getByText('Guest Writer')).toBeInTheDocument()
+  })
+
   it('links the comment count to the post comments', async () => {
     renderFeed()
     const [first, second] = await screen.findAllByRole('article')

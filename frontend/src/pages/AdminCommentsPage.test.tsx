@@ -26,7 +26,7 @@ beforeEach(() => {
   }
   fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (init?.method === 'DELETE') return new Response(null, { status: 204 })
-    if (url === '/api/auth/me') return json({ email: 'a@b.c', displayName: 'Johan' })
+    if (url === '/api/auth/me') return json({ email: 'a@b.c', displayName: 'Johan', isOwner: true })
     if (url === '/api/admin/posts/3') return json({
       id: 3, slug: 'beach-day', title: 'Beach day', body: 'Sun and sand', status: 'Published', commentCount: 1,
       publishedAt: '2026-10-01T10:00:00Z', updatedAt: '2026-10-01T10:00:00Z', author: { displayName: 'Johan' }, images: [],

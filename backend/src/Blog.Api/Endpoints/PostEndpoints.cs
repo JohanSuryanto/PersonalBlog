@@ -8,13 +8,14 @@ using Microsoft.EntityFrameworkCore;
 namespace Blog.Api.Endpoints;
 
 public record ImageDto(string PublicId, int Width, int Height, string? AltText);
-public record FeedItem(int Id, string Slug, string Title, string Excerpt, DateTimeOffset PublishedAt, List<ImageDto> Images, int CommentCount);
+public record FeedItem(int Id, string Slug, string Title, string Excerpt, DateTimeOffset PublishedAt, List<ImageDto> Images, int CommentCount, string AuthorName);
 public record Profile(string DisplayName, string? Bio, int PostCount);
 public record FeedPage(List<FeedItem> Items, string? NextCursor);
 public record PostImageDto(string PublicId, int Position, int Width, int Height, string Format, int Bytes, string? AltText);
 public record AuthorDto(string DisplayName);
 public record PostDetail(int Id, string? Slug, string Title, string Body, DateTimeOffset? PublishedAt, DateTimeOffset UpdatedAt,
-    AuthorDto Author, List<PostImageDto> Images, string Status, PostLink? Newer = null, PostLink? Older = null, int CommentCount = 0);
+    AuthorDto Author, List<PostImageDto> Images, string Status, PostLink? Newer = null, PostLink? Older = null, int CommentCount = 0,
+    string? ReviewNote = null);
 public record PostLink(string Slug, string Title);
 
 public static class PostEndpoints
@@ -26,9 +27,9 @@ public static class PostEndpoints
         app.MapGet("/api/posts", GetFeed);
         app.MapGet("/api/rss.xml", GetRss);
         app.MapGet("/api/profile", async (BlogDbContext db, IConfiguration config) => new Profile(
-            await db.Users.Select(u => u.DisplayName).FirstOrDefaultAsync() ?? "",
+            await OwnerNameAsync(db),
             config["Author:Bio"],
-            await db.Posts.CountAsync(p => p.Status == PostStatus.Published)));
+            await OwnerPostCountAsync(db)));
         app.MapGet("/api/posts/{slug}", async (string slug, BlogDbContext db) =>
         {
             var post = await db.Posts.Include(p => p.Images).AsNoTracking()
@@ -92,10 +93,11 @@ public static class PostEndpoints
                 Images = p.Images.OrderBy(i => i.Position).Select(i => new ImageDto(i.PublicId, i.Width, i.Height, i.AltText)).ToList(),
                 // ponytail: correlated count per item, add a denormalised column if the feed gets slow
                 CommentCount = p.Comments.Count,
+                AuthorName = db.Users.Where(u => u.Id == p.AuthorId).Select(u => u.DisplayName).FirstOrDefault() ?? "",
             })
             .ToListAsync();
 
-        var items = rows.Take(BatchSize).Select(r => new FeedItem(r.Id, r.Slug!, r.Title, r.Excerpt, r.PublishedAt, r.Images, r.CommentCount)).ToList();
+        var items = rows.Take(BatchSize).Select(r => new FeedItem(r.Id, r.Slug!, r.Title, r.Excerpt, r.PublishedAt, r.Images, r.CommentCount, r.AuthorName)).ToList();
         var next = rows.Count > BatchSize ? EncodeCursor(items[^1].PublishedAt, items[^1].Id) : null;
         return Results.Ok(new FeedPage(items, next));
     }
@@ -105,7 +107,7 @@ public static class PostEndpoints
     static async Task<IResult> GetRss(BlogDbContext db, IConfiguration config, HttpRequest request)
     {
         var site = (config["Site:Url"] ?? $"{request.Scheme}://{request.Host}").TrimEnd('/');
-        var author = await db.Users.Select(u => u.DisplayName).FirstOrDefaultAsync() ?? "";
+        var author = await OwnerNameAsync(db);
         var posts = await db.Posts.AsNoTracking()
             .Where(p => p.Status == PostStatus.Published)
             .OrderByDescending(p => p.PublishedAt).ThenByDescending(p => p.Id)
@@ -133,12 +135,33 @@ public static class PostEndpoints
 
     internal static async Task<PostDetail> ToDetailAsync(Post post, BlogDbContext db)
     {
-        var author = await db.Users.AsNoTracking().Select(u => u.DisplayName).FirstOrDefaultAsync() ?? "";
+        var author = await WriterNameAsync(db, post.AuthorId);
         var images = post.Images.OrderBy(i => i.Position)
             .Select(i => new PostImageDto(i.PublicId, i.Position, i.Width, i.Height, i.Format, i.Bytes, i.AltText)).ToList();
         return new PostDetail(post.Id, post.Slug, post.Title, post.Body, post.PublishedAt, post.UpdatedAt,
             new AuthorDto(author), images, post.Status.ToString());
     }
+
+    /// Display name of the blog owner (the account in the Owner role).
+    internal static async Task<string> OwnerNameAsync(BlogDbContext db) =>
+        await Owners(db).Select(u => u.DisplayName).FirstOrDefaultAsync() ?? "";
+
+    /// The profile header is the owner's, so it counts only the owner's published posts (not guest posts).
+    static Task<int> OwnerPostCountAsync(BlogDbContext db)
+    {
+        var owners = Owners(db);
+        return db.Posts.CountAsync(p => p.Status == PostStatus.Published && owners.Any(u => u.Id == p.AuthorId));
+    }
+
+    static IQueryable<Author> Owners(BlogDbContext db) =>
+        from u in db.Users
+        join ur in db.UserRoles on u.Id equals ur.UserId
+        join r in db.Roles on ur.RoleId equals r.Id
+        where r.Name == Roles.Owner
+        select u;
+
+    internal static async Task<string> WriterNameAsync(BlogDbContext db, string authorId) =>
+        await db.Users.Where(u => u.Id == authorId).Select(u => u.DisplayName).FirstOrDefaultAsync() ?? "";
 
     static string EncodeCursor(DateTimeOffset at, int id) =>
         Convert.ToBase64String(Encoding.UTF8.GetBytes($"{at.UtcDateTime:O}|{id}"));

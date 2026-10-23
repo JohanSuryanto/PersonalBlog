@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import Markdown from 'react-markdown'
 import { Link, useBlocker, useNavigate, useParams } from 'react-router-dom'
-import { api, ApiError, type ImageInput, type PostStatus } from '../api'
+import { api, ApiError, MAX_PENDING, PENDING_CHANGED, STATUS_LABEL, type ImageInput, type PostStatus } from '../api'
+import { useAuth } from '../auth'
 import { checkFile, imageUrl, MAX_IMAGES, uploadImage } from '../cloudinary'
 import { Icon, type IconName } from '../components/Icon'
-import { ConfirmDialog } from '../components/ConfirmDialog'
+import { ConfirmDialog, RejectDialog } from '../components/ConfirmDialog'
 import { Toast } from '../components/Toast'
 import { readingMinutes, wordCount } from '../format'
 
@@ -34,6 +35,7 @@ export function EditorPage() {
   const postId = id ? Number(id) : null
   const navigate = useNavigate()
   const bodyRef = useRef<HTMLTextAreaElement>(null)
+  const isOwner = Boolean(useAuth().user?.isOwner)
 
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
@@ -51,6 +53,9 @@ export function EditorPage() {
   const [dragFrom, setDragFrom] = useState<number | null>(null)
   const [dragOver, setDragOver] = useState<number | null>(null)
   const [savedSnapshot, setSavedSnapshot] = useState(() => snapshotOf('', '', []))
+  const [reviewNote, setReviewNote] = useState<string | null>(null)
+  const [rejecting, setRejecting] = useState(false)
+  const [atLimit, setAtLimit] = useState(false)
   const clearToast = useCallback(() => setToast(null), [])
 
   const images = slots.filter((s) => s.status === 'done' && s.image).map((s) => s.image!)
@@ -64,6 +69,7 @@ export function EditorPage() {
         setBody(p.body)
         setStatus(p.status ?? 'Draft')
         setSlug(p.slug)
+        setReviewNote(p.reviewNote ?? null)
         setSlots(p.images.map((img) => ({ key: newKey(), status: 'done', image: img, previewUrl: imageUrl(img.publicId, 300) })))
         setSavedSnapshot(snapshotOf(p.title, p.body, p.images))
         setLoading(false)
@@ -71,6 +77,12 @@ export function EditorPage() {
       () => { setMessage('Could not load this post.'); setLoading(false) },
     )
   }, [postId])
+
+  // A contributor with every slot in use can't start a new post; say so up front instead of failing on submit.
+  useEffect(() => {
+    if (postId !== null || isOwner) return
+    api.adminPosts().then((posts) => setAtLimit(posts.filter((p) => p.status === 'Pending').length >= MAX_PENDING), () => {})
+  }, [postId, isOwner])
 
   // Warn before leaving the editor through an in-app link with unsaved changes.
   // Our own navigations (after save/delete) set leaving.current so they are never blocked.
@@ -187,10 +199,14 @@ export function EditorPage() {
       setStatus(saved.status ?? nextStatus)
       setSlug(saved.slug)
       setSavedSnapshot(snapshotOf(title, body, images))
+      if (saved.status === 'Pending' || saved.status === 'Published') setReviewNote(null)
+      if (was === 'Pending' && saved.status !== 'Pending') window.dispatchEvent(new Event(PENDING_CHANGED))
       setToast(
-        nextStatus === 'Published'
-          ? was === 'Published' ? 'Post updated' : 'Post published'
-          : was === 'Published' ? 'Post unpublished' : 'Draft saved',
+        saved.status === 'Pending' || saved.status === 'Rejected'
+          ? was === 'Pending' || was === 'Rejected' ? 'Changes saved' : 'Submitted for approval'
+          : nextStatus === 'Published'
+            ? was === 'Published' ? 'Post updated' : 'Post published'
+            : was === 'Published' ? 'Post unpublished' : 'Draft saved',
       )
       if (postId === null) {
         leaving.current = true
@@ -201,25 +217,42 @@ export function EditorPage() {
       else if (err instanceof ApiError && err.status === 400) {
         setErrors(err.errors)
         setMessage('Please fix the errors below.')
-      } else setMessage('Could not save. Please try again.')
+      } else if (err instanceof ApiError && (err.status === 409 || err.status === 403)) setMessage(err.message)
+      else setMessage('Could not save. Please try again.')
     } finally {
       setSaving(false)
     }
   }, [title, body, images, postId, status, navigate])
 
   const uploading = slots.some((s) => s.status === 'uploading')
+  // Contributors only ever submit for approval, and can't change a post once it is published.
+  const readOnly = !isOwner && status === 'Published'
+  const saveStatus: PostStatus = isOwner ? status : 'Pending'
 
   // Ctrl/⌘+S saves without changing the status.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault()
-        if (!saving && !uploading) save(status)
+        if (!saving && !uploading && !readOnly) save(saveStatus)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [save, saving, uploading, status])
+  }, [save, saving, uploading, readOnly, saveStatus])
+
+  async function reject(note: string) {
+    setRejecting(false)
+    try {
+      const saved = await api.rejectPost(postId!, note)
+      setStatus(saved.status ?? 'Rejected')
+      setReviewNote(saved.reviewNote ?? null)
+      setToast('Post rejected')
+      window.dispatchEvent(new Event(PENDING_CHANGED))
+    } catch {
+      setMessage('Could not reject. Please try again.')
+    }
+  }
 
   async function destroy() {
     if (postId === null || !window.confirm('Delete this post permanently?')) return
@@ -234,6 +267,17 @@ export function EditorPage() {
   }
 
   if (loading) return <p role="status">Loading…</p>
+  if (atLimit) {
+    return (
+      <section>
+        <Link to="/admin" className="back-link"><Icon name="chevronLeft" size={18} /> Dashboard</Link>
+        <h1>New post</h1>
+        <p role="alert" className="alert">
+          You have {MAX_PENDING} of {MAX_PENDING} posts waiting for approval. Wait for one to be reviewed or delete one.
+        </p>
+      </section>
+    )
+  }
 
   const fieldError = (name: string) => errors[name]?.join(' ') ?? errors[name.toLowerCase()]?.join(' ')
   const titleError = fieldError('Title')
@@ -253,9 +297,15 @@ export function EditorPage() {
         </p>
       )}
       {message && <p role="alert" className="alert" style={{ marginTop: '1rem' }}>{message}</p>}
+      {status === 'Rejected' && reviewNote && (
+        <p className="review-note" style={{ marginTop: '1rem' }}><strong>Owner's note:</strong> {reviewNote}</p>
+      )}
+      {readOnly && (
+        <p className="muted" style={{ marginTop: '1rem' }}>Published posts can only be changed by the owner.</p>
+      )}
 
       <div className="editor-layout">
-        <div className="editor-main">
+        <fieldset className="editor-main plain" disabled={readOnly}>
           <h1 className="visually-hidden">{postId === null ? 'New post' : 'Edit post'}</h1>
 
           <div className="editor-panel">
@@ -381,11 +431,11 @@ export function EditorPage() {
               </ol>
             )}
           </fieldset>
-        </div>
+        </fieldset>
 
         <aside className="publish-box" aria-label="Publishing">
           <div className="publish-status">
-            <span className={`status ${status.toLowerCase()}`}>{status}</span>
+            <span className={`status ${status.toLowerCase()}`}>{STATUS_LABEL[status]}</span>
             <span className={dirty ? 'save-state dirty' : 'save-state'} role="status">
               {saving ? 'Saving…' : dirty ? 'Unsaved changes' : postId === null ? 'Not saved yet' : 'All changes saved'}
             </span>
@@ -393,20 +443,43 @@ export function EditorPage() {
           <p className="muted publish-meta">
             {words} {words === 1 ? 'word' : 'words'} · {readingMinutes(body)} min read · {slots.length} {slots.length === 1 ? 'image' : 'images'}
           </p>
-          <div className="publish-actions">
-            <button type="button" className="primary" onClick={() => save('Published')} disabled={saving || uploading}>
-              {status === 'Published' ? 'Update' : 'Publish'}
-            </button>
-            <button type="button" onClick={() => save('Draft')} disabled={saving || uploading}>
-              {status === 'Published' ? 'Unpublish' : 'Save draft'}
-            </button>
-          </div>
+          {!isOwner ? (
+            !readOnly && (
+              <div className="publish-actions">
+                <button type="button" className="primary" onClick={() => save('Pending')} disabled={saving || uploading}>
+                  {status === 'Pending' ? 'Save changes' : 'Submit for approval'}
+                </button>
+              </div>
+            )
+          ) : status === 'Pending' || status === 'Rejected' ? (
+            <div className="publish-actions">
+              <button type="button" className="primary" onClick={() => save('Published')} disabled={saving || uploading}>
+                Approve &amp; publish
+              </button>
+              <button type="button" onClick={() => save(status)} disabled={saving || uploading}>Save</button>
+              {status === 'Pending' && (
+                <button type="button" className="danger" onClick={() => setRejecting(true)} disabled={saving || uploading || dirty}
+                  title={dirty ? 'Save your changes first' : undefined}>
+                  Reject
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="publish-actions">
+              <button type="button" className="primary" onClick={() => save('Published')} disabled={saving || uploading}>
+                {status === 'Published' ? 'Update' : 'Publish'}
+              </button>
+              <button type="button" onClick={() => save('Draft')} disabled={saving || uploading}>
+                {status === 'Published' ? 'Unpublish' : 'Save draft'}
+              </button>
+            </div>
+          )}
           {uploading && <p className="muted publish-meta">Waiting for uploads…</p>}
-          <p className="muted publish-hint"><kbd>Ctrl</kbd> + <kbd>S</kbd> to save</p>
+          {!readOnly && <p className="muted publish-hint"><kbd>Ctrl</kbd> + <kbd>S</kbd> to save</p>}
           {status === 'Published' && slug && (
             <Link to={`/posts/${slug}`} className="publish-link"><Icon name="eye" size={16} /> View public page</Link>
           )}
-          {postId !== null && (
+          {postId !== null && !readOnly && (
             <button type="button" className="ghost danger delete-button" onClick={destroy}>
               <Icon name="trash" size={16} /> Delete post
             </button>
@@ -415,6 +488,7 @@ export function EditorPage() {
       </div>
 
       <Toast message={toast} onDone={clearToast} />
+      {rejecting && <RejectDialog title={title} onReject={reject} onCancel={() => setRejecting(false)} />}
 
       {blocker.state === 'blocked' && (
         <ConfirmDialog

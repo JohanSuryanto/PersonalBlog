@@ -25,6 +25,10 @@ public class BlogDbContext(DbContextOptions<BlogDbContext> options) : IdentityDb
             e.Property(p => p.Status).HasConversion<string>().HasMaxLength(16);
             e.HasIndex(p => p.Slug).IsUnique().HasFilter("\"Slug\" IS NOT NULL");
             e.HasIndex(p => new { p.Status, p.PublishedAt, p.Id }).IsDescending(false, true, true);
+            e.Property(p => p.ReviewNote).HasMaxLength(Post.MaxReviewNoteLength);
+            e.HasOne<Author>().WithMany().HasForeignKey(p => p.AuthorId).OnDelete(DeleteBehavior.Restrict);
+            // The database caps pending posts per contributor: each holds slot 1 or 2.
+            e.HasIndex(p => new { p.AuthorId, p.PendingSlot }).IsUnique().HasFilter("\"PendingSlot\" IS NOT NULL");
             e.HasMany(p => p.Images).WithOne().HasForeignKey(i => i.PostId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(p => p.Comments).WithOne().HasForeignKey(c => c.PostId).OnDelete(DeleteBehavior.Cascade);
         });

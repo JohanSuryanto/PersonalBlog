@@ -38,9 +38,9 @@ public static class CommentEndpoints
             var postId = await PublishedPostIdAsync(slug, db);
             if (postId is null) return Results.NotFound();
 
-            var isAuthor = http.User.Identity?.IsAuthenticated == true;
+            var isAuthor = http.User.IsInRole(Roles.Owner);
             var name = isAuthor
-                ? await db.Users.Select(u => u.DisplayName).FirstAsync()
+                ? await PostEndpoints.OwnerNameAsync(db)
                 : input.Name?.Trim() ?? "";
             var body = input.Body?.Trim() ?? "";
 
@@ -62,7 +62,7 @@ public static class CommentEndpoints
             return Results.Created(location, new CommentDto(comment.Id, comment.Name, comment.Body, comment.IsAuthor, comment.CreatedAt));
         }).RequireRateLimiting(RateLimitPolicy);
 
-        var admin = app.MapGroup("/api/admin/comments").RequireAuthorization();
+        var admin = app.MapGroup("/api/admin/comments").RequireAuthorization(Roles.Owner);
 
         admin.MapGet("/", async (int? before, BlogDbContext db) =>
         {

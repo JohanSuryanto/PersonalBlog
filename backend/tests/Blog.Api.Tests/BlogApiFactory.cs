@@ -23,7 +23,7 @@ public class FakeImageStore() : ImageStore(new ConfigurationBuilder().Build(), N
     public List<string> Deleted { get; } = [];
 
     public override UploadSignature CreateUploadSignature() =>
-        new("demo", "key", 1, "blog", "jpg,png,webp,gif", "sig");
+        new("demo", "key", 1, "blog", "jpg,png,webp,gif", Guid.NewGuid().ToString("N"), "sig");
 
     public override Task DeleteAsync(IEnumerable<string> publicIds)
     {
@@ -81,12 +81,30 @@ public class BlogApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     });
 
     /// A client that has just "come back from Google" with these claims (see FakeGoogleReturn); redirects not followed.
-    public async Task<HttpClient> GoogleClientAsync(string sub, string? email, bool? verified = true)
+    public async Task<HttpClient> GoogleClientAsync(string sub, string? email, bool? verified = true, string? name = null)
     {
         var client = Client(followRedirects: false);
-        var query = $"?sub={Uri.EscapeDataString(sub)}&email={Uri.EscapeDataString(email ?? "")}&verified={verified?.ToString().ToLowerInvariant()}";
+        var query = $"?sub={Uri.EscapeDataString(sub)}&email={Uri.EscapeDataString(email ?? "")}&verified={verified?.ToString().ToLowerInvariant()}"
+            + $"&name={Uri.EscapeDataString(name ?? "")}";
         (await client.GetAsync("/test/external-login" + query)).EnsureSuccessStatusCode();
         return client;
+    }
+
+    /// A signed-in contributor: a new Google account, created on first sign-in (spec 004).
+    public async Task<HttpClient> ContributorClientAsync(string sub = "sub-c1", string email = "writer@example.com", string? name = "Writer")
+    {
+        var client = await GoogleClientAsync(sub, email, name: name);
+        var res = await client.GetAsync("/api/auth/google/done");
+        if (res.Headers.Location?.OriginalString != "/admin")
+            throw new InvalidOperationException($"Contributor sign-in failed: {(int)res.StatusCode} {res.Headers.Location}");
+        return client;
+    }
+
+    public async Task<string> UserIdAsync(string email)
+    {
+        var id = "";
+        await WithDbAsync(async db => id = await db.Users.Where(u => u.Email == email).Select(u => u.Id).SingleAsync());
+        return id;
     }
 
     public async Task<HttpClient> AuthorClientAsync()
@@ -115,11 +133,12 @@ public class BlogApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     }
 
     public async Task<Post> SeedPostAsync(string title, PostStatus status = PostStatus.Published, DateTimeOffset? publishedAt = null,
-        string? body = null, int images = 0)
+        string? body = null, int images = 0, string? authorId = null)
     {
         var now = DateTimeOffset.UtcNow;
         var post = new Post
         {
+            AuthorId = authorId ?? await UserIdAsync(AuthorEmail),
             Title = title,
             Body = body ?? $"Body of {title}",
             Excerpt = body ?? $"Body of {title}",
@@ -152,6 +171,7 @@ class FakeGoogleReturn : IStartupFilter
             var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, q["sub"]!) };
             if (q["email"] is { Count: > 0 } email && email != "") claims.Add(new(ClaimTypes.Email, email!));
             if (q["verified"] is { Count: > 0 } verified && verified != "") claims.Add(new("email_verified", verified!));
+            if (q["name"] is { Count: > 0 } name && name != "") claims.Add(new(ClaimTypes.Name, name!));
             var props = new AuthenticationProperties { Items = { ["LoginProvider"] = "Google" } };
             await ctx.SignInAsync(IdentityConstants.ExternalScheme, new ClaimsPrincipal(new ClaimsIdentity(claims, "Google")), props);
             ctx.Response.StatusCode = StatusCodes.Status204NoContent;

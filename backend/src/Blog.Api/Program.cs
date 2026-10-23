@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Blog.Api;
@@ -59,7 +60,10 @@ builder.Services.ConfigureApplicationCookie(o =>
     o.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = 401; return Task.CompletedTask; };
     o.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = 403; return Task.CompletedTask; };
 });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(o => o.AddPolicy(Roles.Owner, p => p.RequireRole(Roles.Owner)));
+// Re-check the account on every request so a blocked writer is signed out at once.
+// ponytail: one user lookup per signed-in request; raise the interval if that ever shows up in latency
+builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.Zero);
 builder.Services.AddIdentityCore<Author>(o =>
     {
         o.User.RequireUniqueEmail = true;
@@ -67,6 +71,7 @@ builder.Services.AddIdentityCore<Author>(o =>
         o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
         o.Lockout.AllowedForNewUsers = true;
     })
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<BlogDbContext>()
     .AddSignInManager();
 
@@ -80,6 +85,17 @@ builder.Services.AddRateLimiter(o =>
         {
             PermitLimit = config.GetValue("Comments:RateLimit:PermitLimit", 5),
             Window = TimeSpan.FromMinutes(config.GetValue("Comments:RateLimit:WindowMinutes", 10)),
+            QueueLimit = 0,
+        });
+    });
+    o.AddPolicy(ImageEndpoints.RateLimitPolicy, ctx =>
+    {
+        if (ctx.User.IsInRole(Roles.Owner)) return RateLimitPartition.GetNoLimiter("owner");
+        var config = ctx.RequestServices.GetRequiredService<IConfiguration>();
+        return RateLimitPartition.GetFixedWindowLimiter(ctx.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "unknown", _ => new()
+        {
+            PermitLimit = config.GetValue("Images:ContributorUploadsPerDay", 30),
+            Window = TimeSpan.FromDays(1),
             QueueLimit = 0,
         });
     });
@@ -129,6 +145,7 @@ app.MapAdminPostEndpoints();
 app.MapImageEndpoints();
 app.MapCommentEndpoints();
 app.MapPreviewEndpoints();
+app.MapWriterEndpoints();
 
 await AuthorSeeder.SeedAsync(app.Services);
 

@@ -173,7 +173,7 @@ export function FeedPage() {
         </div>
       )}
 
-      {items.map((post) => <PostCard key={post.id} post={post} author={author} onOpen={openPost} />)}
+      {items.map((post) => <PostCard key={post.id} post={post} author={post.authorName || author} onOpen={openPost} />)}
 
       {loading && items.length === 0 && (<><PostCardSkeleton /><PostCardSkeleton /></>)}
 

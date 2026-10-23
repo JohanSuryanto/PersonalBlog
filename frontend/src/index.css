@@ -147,6 +147,7 @@ textarea { resize: vertical; line-height: 1.6; }
 .site-header nav { margin-left: auto; display: flex; align-items: center; gap: 0.25rem; }
 .site-header nav a { padding: 0.4rem 0.75rem; border-radius: 8px; color: var(--fg); font-weight: 600; }
 .site-header nav a:hover { background: var(--surface-2); text-decoration: none; }
+@media (max-width: 420px) { .site-header nav a { padding: 0.4rem 0.5rem; } } /* signed-in nav fits a 390px phone */
 
 /* ---------- Avatar ---------- */
 .avatar {
@@ -392,15 +393,34 @@ textarea { resize: vertical; line-height: 1.6; }
 /* ---------- Dashboard ---------- */
 .page-head { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
 .page-head h1 { margin: 0; font-size: 1.6rem; letter-spacing: -0.01em; }
-.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin: 0 0 1.5rem; }
+/* One row of equal cards however many there are; two per row on phones when there are four. */
+.stats-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0.75rem; margin: 0 0 1.5rem; }
+@media (max-width: 640px) { .stats-row:has(> :nth-child(4)) { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stats-row:has(+ .stats-hint) { margin-bottom: 0.5rem; }
+.stats-row > div { display: flex; flex-direction: column; justify-content: space-between; } /* numbers line up even if a label wraps */
+.stats-hint { margin: 0 0 1.5rem; font-size: 0.9rem; }
+.section-title { font-family: var(--font-display); font-size: 1.3rem; letter-spacing: -0.01em; margin: 0 0 0.75rem; }
+.review-queue { margin-bottom: 2rem; }
+.blocked-writers { margin-top: 2rem; }
+.check-row { display: flex; align-items: flex-start; gap: 0.5rem; margin-top: 0.85rem; font-size: 0.9rem; color: var(--fg); }
+.check-row input { width: auto; margin-top: 0.2rem; flex: none; }
+.row-actions.review-actions { gap: 0.5rem; }
+.review-actions button { padding: 0.45rem 0.9rem; font-size: 0.9rem; }
+@media (max-width: 640px) {
+  /* Phones: Approve / Reject get their own full-width row under the title. */
+  .review-queue li { flex-wrap: wrap; }
+  .row-actions.review-actions { flex: 1 1 100%; }
+  .review-actions button { flex: 1; }
+  .list-toolbar .search-field.compact { flex: 1 1 100%; min-width: 0; }
+}
 .stats-row > div {
   padding: 1rem 1.1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
 }
 .stats-row dt { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 .stats-row dd { margin: 0.2rem 0 0; font-size: 1.8rem; font-weight: 700; }
 .list-toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
-.tabs { display: inline-flex; gap: 0.25rem; padding: 0.25rem; background: var(--surface-2); border-radius: 10px; }
-.tabs button { border: 0; background: transparent; padding: 0.35rem 0.8rem; border-radius: 8px; font-size: 0.9rem; }
+.tabs { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.25rem; background: var(--surface-2); border-radius: 10px; max-width: 100%; }
+.tabs button { border: 0; background: transparent; padding: 0.35rem 0.8rem; border-radius: 8px; font-size: 0.9rem; white-space: nowrap; }
 .tabs button[aria-pressed='true'] { background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
 .tabs .count { color: var(--muted); font-weight: 500; margin-left: 0.15rem; }
 .search-field.compact { min-width: 220px; flex: 0 1 280px; }
@@ -417,20 +437,30 @@ textarea { resize: vertical; line-height: 1.6; }
 .post-info { min-width: 0; flex: 1; }
 .post-list .title { display: block; font-weight: 600; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .post-list .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.2rem; font-size: 0.82rem; }
-.row-actions { display: flex; gap: 0.15rem; }
+/* "·" between meta items (not after the status pill), so separators are always the same. */
+.post-list .meta > :not(.status) + :not(.status)::before { content: '·'; margin-right: 0.4rem; }
+.row-actions { display: flex; gap: 0.15rem; flex: none; }
 .icon-link { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: var(--muted); }
 .icon-link:hover { background: var(--surface-2); color: var(--fg); text-decoration: none; }
 .status {
   display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.03em;
+  text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap;
 }
 .status.published { background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success); }
 .status.draft { background: var(--surface-2); color: var(--muted); }
+.status.pending { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+.status.rejected { background: color-mix(in srgb, var(--error) 12%, transparent); color: var(--error); }
+fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
+.review-note {
+  margin: 0.4rem 0 0; padding: 0.35rem 0.6rem; border-left: 3px solid var(--error); border-radius: 0 6px 6px 0;
+  background: color-mix(in srgb, var(--error) 6%, transparent); font-size: 0.85rem;
+}
 
 /* ---------- Editor ---------- */
 .editor-layout { display: grid; gap: 1.25rem; margin-top: 1rem; align-items: start; }
 @media (min-width: 900px) { .editor-layout { grid-template-columns: minmax(0, 1fr) 260px; } }
 .editor-main > * + * { margin-top: 1.25rem; }
+.editor-main > h1.visually-hidden + * { margin-top: 0; } /* keep the first panel level with the publish box */
 .editor-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; }
 .title-input {
   border: 0; padding: 0.25rem 0; font-size: 1.9rem; font-weight: 700; letter-spacing: -0.02em; background: transparent;
@@ -482,7 +512,7 @@ legend + * { clear: both; }
   position: sticky; top: 4.5rem; display: grid; gap: 0.75rem; padding: 1.1rem;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
 }
-.publish-status { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.publish-status { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; }
 .save-state { font-size: 0.8rem; color: var(--muted); }
 .save-state.dirty { color: var(--fg); font-weight: 600; }
 .save-state.dirty::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #e0a100; margin-right: 0.35rem; }
@@ -515,7 +545,7 @@ kbd {
 
 /* ---------- Toast ---------- */
 .toast {
-  position: fixed; left: 50%; bottom: 1.5rem; transform: translate(-50%, 150%); z-index: 50;
+  position: fixed; left: 50%; bottom: 1.5rem; transform: translate(-50%, calc(100% + 4rem)); z-index: 50;
   padding: 0.7rem 1.2rem; border-radius: 10px; background: var(--fg); color: var(--bg); font-weight: 600;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25); transition: transform 0.25s; pointer-events: none;
 }
@@ -631,6 +661,9 @@ button.link-button.danger-link:hover { color: var(--error); }
   border-radius: 999px; background: var(--error); color: #fff; font-size: 0.72rem; font-weight: 700;
 }
 :root[data-theme='dark'] .pill-count { color: #000; }
+/* Header badge sits on the link's corner so the nav doesn't get wider (it must fit a 390px phone). */
+.site-header nav a.nav-badged { position: relative; }
+.nav-badge { position: absolute; top: -0.35rem; right: -0.35rem; margin: 0; min-width: 1.15rem; height: 1.15rem; font-size: 0.68rem; }
 .stats-row > div.highlight { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
 .stats-row > div.highlight dd { color: var(--accent); }
 .comment-day + .comment-day { margin-top: 1.25rem; }

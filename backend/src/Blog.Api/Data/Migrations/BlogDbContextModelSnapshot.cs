@@ -133,6 +133,10 @@ namespace Blog.Api.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AuthorId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Body")
                         .IsRequired()
                         .HasColumnType("text");
@@ -145,8 +149,15 @@ namespace Blog.Api.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<short?>("PendingSlot")
+                        .HasColumnType("smallint");
+
                     b.Property<DateTimeOffset?>("PublishedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("Slug")
                         .HasMaxLength(80)
@@ -156,6 +167,9 @@ namespace Blog.Api.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -170,6 +184,10 @@ namespace Blog.Api.Data.Migrations
                     b.HasIndex("Slug")
                         .IsUnique()
                         .HasFilter("\"Slug\" IS NOT NULL");
+
+                    b.HasIndex("AuthorId", "PendingSlot")
+                        .IsUnique()
+                        .HasFilter("\"PendingSlot\" IS NOT NULL");
 
                     b.HasIndex("Status", "PublishedAt", "Id")
                         .IsDescending(false, true, true);
@@ -379,6 +397,15 @@ namespace Blog.Api.Data.Migrations
                         .WithMany("Comments")
                         .HasForeignKey("PostId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Blog.Api.Models.Post", b =>
+                {
+                    b.HasOne("Blog.Api.Models.Author", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
