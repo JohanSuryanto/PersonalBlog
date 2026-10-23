@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 
 namespace Blog.Api.Tests;
 
@@ -53,5 +55,22 @@ public class AuthTests(BlogApiFactory factory) : ApiTest(factory)
     {
         var res = await Factory.Client().PostAsJsonAsync("/api/auth/register", new { email = "x@y.z", password = "Password-123" });
         Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_survives_a_restart()
+    {
+        var login = await Factory.Client().PostAsJsonAsync("/api/auth/login",
+            new { email = BlogApiFactory.AuthorEmail, password = BlogApiFactory.AuthorPassword });
+        var cookie = login.Headers.GetValues("Set-Cookie").First(c => c.StartsWith("blog_auth=")).Split(';')[0];
+
+        // Keys live in the database, not on the machine (containers lose their files on restart).
+        await Factory.WithDbAsync(async db => Assert.True(await db.DataProtectionKeys.AnyAsync()));
+
+        // A second app instance on the same database stands in for the restarted API.
+        await using var restarted = Factory.WithWebHostBuilder(_ => { });
+        var client = restarted.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        client.DefaultRequestHeaders.Add("Cookie", cookie);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/auth/me")).StatusCode);
     }
 }

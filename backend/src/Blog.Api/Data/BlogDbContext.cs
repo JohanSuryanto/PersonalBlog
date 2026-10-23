@@ -1,14 +1,17 @@
 using Blog.Api.Models;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Blog.Api.Data;
 
-public class BlogDbContext(DbContextOptions<BlogDbContext> options) : IdentityDbContext<Author>(options)
+public class BlogDbContext(DbContextOptions<BlogDbContext> options) : IdentityDbContext<Author>(options), IDataProtectionKeyContext
 {
     public DbSet<Post> Posts => Set<Post>();
     public DbSet<PostImage> PostImages => Set<PostImage>();
     public DbSet<Comment> Comments => Set<Comment>();
+    // Keys that sign the login cookie; stored here so logins survive restarts and redeploys.
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {

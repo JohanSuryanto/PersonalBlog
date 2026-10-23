@@ -5,6 +5,7 @@ using Blog.Api.Data;
 using Blog.Api.Endpoints;
 using Blog.Api.Models;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +13,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<BlogDbContext>(o =>
     o.UseNpgsql(builder.Configuration.GetConnectionString("Blog"), npgsql => npgsql.EnableRetryOnFailure()));
+
+builder.Services.AddDataProtection().PersistKeysToDbContext<BlogDbContext>();
 
 var authentication = builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme);
 authentication.AddIdentityCookies();
