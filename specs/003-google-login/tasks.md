@@ -165,7 +165,7 @@ refused, no account created. US3: password login keeps working.
 - [X] T018 [P] In `README.md`, add two rows to the Secrets table: `Authentication:Google:ClientId` / `Authentication:Google:ClientSecret` (env `Authentication__Google__ClientId` …; optional, the Google button is hidden without them). Add a Deployment bullet: register `https://<blog>/api/auth/signin-google` (and `http://localhost:5200/api/auth/signin-google` for dev) as authorized redirect URIs in Google Cloud Console, and set `Site__Url`. Link `specs/003-google-login/`.
 - [X] T019 [P] In `specs/001-blog-mvp/contracts/api.md`, add a note under the Auth section that it is extended by [003-google-login](../../003-google-login/contracts/api.md) (`/providers`, `/google`, `/signin-google`, `/google/done`).
 - [X] T020 Run `dotnet test backend` (Docker) and `cd frontend; npm test; npm run build`. All must pass.
-- [ ] T021 Run quickstart.md validation rows 1–7 against a real Google client (needs your Google client ID and secret in user-secrets).
+- [X] T021 Run quickstart.md validation rows 1–7 against a real Google client (needs your Google client ID and secret in user-secrets). Done 2026-10-23: rows 1–4, 6, 7 pass. Row 5 skipped because Google's account chooser has no Cancel button; checked instead by sending Google's access_denied callback with a real state cookie, which redirects to /login?error=cancelled.
 
 ---
 

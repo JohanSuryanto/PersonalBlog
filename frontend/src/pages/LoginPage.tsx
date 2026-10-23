@@ -22,7 +22,7 @@ export function LoginPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const target = (location.state as { from?: string } | null)?.from ?? '/admin'
 
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(() => GOOGLE_ERRORS[searchParams.get('error') ?? ''] ?? null)
   const [busy, setBusy] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [capsLock, setCapsLock] = useState(false)
@@ -34,6 +34,11 @@ export function LoginPage() {
   useEffect(() => {
     api.providers().then((p) => setGoogle(p.google), () => {})
   }, [])
+
+  // The Google error now lives in state; drop it from the URL so a refresh shows a clean page.
+  useEffect(() => {
+    if (searchParams.has('error')) setSearchParams({}, { replace: true })
+  }, [searchParams, setSearchParams])
 
   // Decorative collage of recent post photos for the brand panel.
   useEffect(() => {
@@ -63,7 +68,6 @@ export function LoginPage() {
     const form = new FormData(e.currentTarget)
     setBusy(true)
     setError(null)
-    setSearchParams({}, { replace: true })
     try {
       setUser(await api.login(String(form.get('email')), String(form.get('password'))))
       navigate(target, { replace: true })
@@ -83,8 +87,7 @@ export function LoginPage() {
   }
 
   const checkCaps = (e: KeyboardEvent<HTMLInputElement>) => setCapsLock(e.getModifierState?.('CapsLock') ?? false)
-  const shownError = error ?? GOOGLE_ERRORS[searchParams.get('error') ?? ''] ?? null
-  const described = [shownError && 'login-error', capsLock && 'caps-warning'].filter(Boolean).join(' ') || undefined
+  const described = [error && 'login-error', capsLock && 'caps-warning'].filter(Boolean).join(' ') || undefined
 
   return (
     <div className="login-layout">
@@ -114,7 +117,7 @@ export function LoginPage() {
                 autoFocus
                 required
                 placeholder="you@example.com"
-                aria-describedby={shownError ? 'login-error' : undefined}
+                aria-describedby={error ? 'login-error' : undefined}
               />
             </label>
             <label htmlFor="login-password">Password</label>
@@ -142,9 +145,9 @@ export function LoginPage() {
             </div>
             {capsLock && <p id="caps-warning" className="hint-warning">Caps Lock is on</p>}
 
-            {shownError && (
+            {error && (
               <p id="login-error" role="alert" className="alert">
-                {shownError}
+                {error}
                 {lockedUntil && <> Try again in <strong><time>{countdown}</time></strong>.</>}
               </p>
             )}
