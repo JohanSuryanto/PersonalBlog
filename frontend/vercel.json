@@ -1,10 +1,10 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://YOUR-BACKEND-HOST/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://johans-journal-api.onrender.com/api/:path*" },
     {
       "source": "/posts/:slug",
       "has": [{ "type": "header", "key": "user-agent", "value": "(?i).*(bot|crawler|spider|facebookexternalhit|whatsapp|slack|discord|telegram|linkedin|embedly|skype|pinterest|vkshare|applebot).*" }],
-      "destination": "https://YOUR-BACKEND-HOST/api/preview/posts/:slug"
+      "destination": "https://johans-journal-api.onrender.com/api/preview/posts/:slug"
     },
     {
       "source": "/",
@@ -12,7 +12,7 @@
         { "type": "header", "key": "user-agent", "value": "(?i).*(bot|crawler|spider|facebookexternalhit|whatsapp|slack|discord|telegram|linkedin|embedly|skype|pinterest|vkshare|applebot).*" },
         { "type": "query", "key": "post", "value": "(?<slug>.+)" }
       ],
-      "destination": "https://YOUR-BACKEND-HOST/api/preview/posts/:slug"
+      "destination": "https://johans-journal-api.onrender.com/api/preview/posts/:slug"
     },
     { "source": "/((?!assets/).*)", "destination": "/index.html" }
   ]

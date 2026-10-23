@@ -62,7 +62,7 @@ dotnet ef database update --connection "Host=ep-xxx.region.aws.neon.tech;Databas
   so the backend tells Google the public address. Only the author's Google account (verified email equal to
   `Author:Email`) can sign in; it is linked on first use in `AspNetUserLogins`. No accounts are ever created.
 - Frontend: `npm run build` in `frontend/` → static host. It must rewrite `/api/*` to the backend so the
-  login cookie stays same-origin (`frontend/vercel.json` is an example; replace `YOUR-BACKEND-HOST`).
+  login cookie stays same-origin (`frontend/vercel.json` points at `johans-journal-api.onrender.com`; change it if the backend moves).
 - The blog name lives in `frontend/src/site.ts`, `frontend/index.html` and the backend `Site:Name` setting.
 - Set `Site__Url` (e.g. `https://myblog.example`) on the backend so the RSS feed (`/api/rss.xml`) links to the
   public site rather than the backend host.
